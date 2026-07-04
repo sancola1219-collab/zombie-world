@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>殭屍世界：黑鴉市事件</title>
+<link rel="stylesheet" href="./css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="hint"></div>
+</div>
+<div id="loading" class="overlay">
+  <div class="panel">
+    <h1>殭屍世界</h1>
+    <p>黑鴉市事件</p>
+    <p class="tip">載入中…</p>
+  </div>
+</div>
+<div id="pause" class="overlay" style="display:none">
+  <div class="panel">
+    <h1>暫停</h1>
+    <button id="resume">繼續遊戲</button>
+    <p class="tip">點擊畫面鎖定視角．WASD 移動．Shift 奔跑．E 互動．Esc 暫停</p>
+  </div>
+</div>
+<div id="error" class="overlay" style="display:none">
+  <div class="panel">
+    <h1>無法啟動</h1>
+    <p>你的瀏覽器不支援 WebGL，無法執行本遊戲。</p>
+  </div>
+</div>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
