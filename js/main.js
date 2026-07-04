@@ -42,6 +42,8 @@ function boot() {
   let stepDistance = 0;
   let activeRoom = null;
   let lastHint = null;
+  let everLocked = false;
+  const isTouchOnly = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
 
   function hint(text) {
     if (text === lastHint) return;
@@ -51,20 +53,36 @@ function boot() {
 
   function setPaused(p) {
     paused = p;
+    if (p) {
+      $('pause-tip').textContent =
+        (input.dragMode ? '按住滑鼠拖曳調整視角' : '點擊畫面鎖定視角') +
+        '．WASD 移動．Shift 奔跑．E 互動．Esc 暫停';
+    }
     $('pause').style.display = p ? 'flex' : 'none';
   }
 
   $('resume').addEventListener('click', () => {
     setPaused(false);
     audio.unlock();
-    if (!input.dragMode && canvas.requestPointerLock) canvas.requestPointerLock();
+    if (!input.dragMode && canvas.requestPointerLock) {
+      // Esc 後約 1.25 秒內重新上鎖會被瀏覽器拒絕——吞掉拒絕，玩家點畫面即重試
+      const p = canvas.requestPointerLock();
+      if (p && p.catch) p.catch(() => {});
+    }
   });
 
   // 按 Esc 離開 PointerLock 時瀏覽器不會給頁面 keydown——用失鎖事件觸發暫停
   document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement !== canvas && !input.dragMode && !paused) {
+    if (document.pointerLockElement === canvas) {
+      everLocked = true;
+    } else if (!input.dragMode && !paused) {
       setPaused(true);
     }
+  });
+
+  // 分頁隱藏時自動暫停（涵蓋拖曳模式；單機恐怖遊戲不該在看不到畫面時繼續推進）
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !paused) setPaused(true);
   });
 
   function updateActiveRooms() {
@@ -77,6 +95,14 @@ function boot() {
       if (other) visible.push(other);
     }
     renderer.setActiveRooms(visible);
+  }
+
+  // 尚未上手前的引導文字（取得過 pointer lock 後就不再顯示）
+  function idleHint() {
+    if (everLocked) return '';
+    if (isTouchOnly) return '目前版本需鍵盤滑鼠操作，觸控支援將於後續版本推出';
+    if (input.dragMode) return '按住滑鼠拖曳調整視角．WASD 移動．E 互動';
+    return '點擊畫面鎖定視角．WASD 移動．E 互動';
   }
 
   function nearestDoor() {
@@ -97,6 +123,7 @@ function boot() {
   function update(dt) {
     if (paused) {
       input.actions(); // 暫停時仍消化輸入緩衝，避免恢復瞬間視角暴衝
+      input.consumePressed('Escape'); // 丟棄暫停中按的 Esc，避免恢復後下一 tick 立刻重新暫停
       return;
     }
     const actions = input.actions();
@@ -124,13 +151,14 @@ function boot() {
       } else {
         hint(door.open ? '按 E 關門' : '按 E 開門');
         if (actions.interact) {
-          world.setDoorOpen(door.id, !door.open);
-          renderer.setDoorOpen(door.id, door.open);
+          const next = !door.open;
+          world.setDoorOpen(door.id, next);
+          renderer.setDoorOpen(door.id, next);
           audio.play('door');
         }
       }
     } else {
-      hint('');
+      hint(idleHint());
     }
 
     updateActiveRooms();
@@ -155,7 +183,7 @@ function boot() {
   $('loading').style.display = 'none';
 
   // 供自動驗證與除錯（發佈版也留著，無安全疑慮）
-  window.__zw = { world, player, input, loop, renderer, saves, version: 'phase1' };
+  window.__zw = { world, player, input, loop, renderer, saves, setPaused, version: 'phase1' };
 }
 
 boot();

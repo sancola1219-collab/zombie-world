@@ -1,5 +1,6 @@
 // 固定時步遊戲迴圈：邏輯永遠以 1/hz 秒為單位前進，與渲染（rAF）解耦。
-// 分頁隱藏時 rAF 會停擺，改由 setInterval 驅動 tick，邏輯不中斷。
+// 分頁隱藏時 rAF 會停擺，改由 setInterval 驅動 tick；受瀏覽器節流與
+// maxFrameTime 限制，隱藏期間遊戲時間會慢於牆鐘（上層可選擇自動暫停）。
 export class GameLoop {
   constructor({ update, render = null, hz = 60, maxFrameTime = 0.25, maxUpdatesPerTick = 240 }) {
     this.update = update;
@@ -47,16 +48,21 @@ export class GameLoop {
       if (this.render) this.render();
       this._raf = requestAnimationFrame(rafStep);
     };
-    this._raf = requestAnimationFrame(rafStep);
-    this._onVis = () => {
-      if (!this.running) return;
+    // 每次切換驅動器前先取消兩種舊排程，避免重複 rAF 鏈；
+    // 啟動當下就依 document.hidden 選擇（頁面可能一載入就是隱藏狀態）
+    const startDriver = () => {
+      cancelAnimationFrame(this._raf);
+      clearInterval(this._interval);
       if (document.hidden) {
-        cancelAnimationFrame(this._raf);
         this._interval = setInterval(() => this.tick(performance.now() / 1000), 50);
       } else {
-        clearInterval(this._interval);
         this._raf = requestAnimationFrame(rafStep);
       }
+    };
+    startDriver();
+    this._onVis = () => {
+      if (!this.running) return;
+      startDriver();
     };
     document.addEventListener('visibilitychange', this._onVis);
   }

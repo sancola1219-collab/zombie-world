@@ -10,6 +10,14 @@ export class Input {
     this.dragMode = false;
     this._dragging = false;
     this._dragLast = null;
+    this._lockErrors = 0;
+  }
+
+  // 失焦/隱藏時呼叫：keyup 可能永遠不會到，清掉暫態避免幽靈按鍵持續移動
+  clearTransient() {
+    this.keys.clear();
+    this._justPressed.clear();
+    this._dragging = false;
   }
 
   onKeyDown(code, repeat = false) {
@@ -64,8 +72,18 @@ export class Input {
     window.addEventListener('keyup', (e) => this.onKeyUp(e.code));
     document.addEventListener('pointerlockchange', () => {
       this.pointerLocked = document.pointerLockElement === canvas;
+      if (this.pointerLocked) this._lockErrors = 0;
     });
-    document.addEventListener('pointerlockerror', () => this.enableDragMode());
+    // Esc 退出後瀏覽器有約 1.25 秒重新上鎖冷卻期，暫時性失敗不可永久降級；
+    // 連續多次失敗才視為環境不支援，切換拖曳模式
+    document.addEventListener('pointerlockerror', () => {
+      this._lockErrors += 1;
+      if (this._lockErrors >= 3) this.enableDragMode();
+    });
+    window.addEventListener('blur', () => this.clearTransient());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.clearTransient();
+    });
     canvas.addEventListener('click', () => {
       if (this.pointerLocked || this.dragMode) return;
       if (canvas.requestPointerLock) canvas.requestPointerLock();

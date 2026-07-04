@@ -31,11 +31,18 @@ export class SaveStore {
     return true;
   }
 
+  // mem 優先：mem 只在寫入失敗後才有資料，必定不比 storage 舊。
+  // 降級後 storage 仍要當讀取後備，否則配額滿的瞬間所有舊存檔會「消失」。
   load(key) {
-    let json = null;
-    if (this.persistent) json = this.storage.getItem(key);
-    if (json === null || json === undefined) json = this.mem.has(key) ? this.mem.get(key) : null;
-    if (json === null) return null;
+    let json = this.mem.has(key) ? this.mem.get(key) : null;
+    if (json === null && this.storage) {
+      try {
+        json = this.storage.getItem(key);
+      } catch {
+        json = null;
+      }
+    }
+    if (json === null || json === undefined) return null;
     try {
       return JSON.parse(json);
     } catch {
@@ -43,14 +50,15 @@ export class SaveStore {
     }
   }
 
+  // 兩邊都刪：只刪 mem 的話，降級期間刪除的存檔會在下次載入時從 storage 復活
   remove(key) {
-    if (this.persistent) {
+    this.mem.delete(key);
+    if (this.storage) {
       try {
         this.storage.removeItem(key);
       } catch {
         // 忽略
       }
     }
-    this.mem.delete(key);
   }
 }

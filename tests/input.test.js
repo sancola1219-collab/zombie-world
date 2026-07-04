@@ -37,6 +37,16 @@ test('滑鼠視角累積並在讀取後歸零', () => {
   assert.deepEqual(input.actions().look, [0, 0]);
 });
 
+test('clearTransient：失焦後幽靈按鍵全部清除', () => {
+  const input = new Input();
+  input.onKeyDown('KeyW');
+  input.onKeyDown('KeyE');
+  input.clearTransient();
+  assert.equal(input.pressed('KeyW'), false);
+  assert.equal(input.consumePressed('KeyE'), false);
+  assert.equal(input.actions().moveZ, 0);
+});
+
 test('Shift 奔跑', () => {
   const input = new Input();
   assert.equal(input.actions().run, false);

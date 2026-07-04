@@ -36,6 +36,26 @@ test('maxUpdatesPerTick 螺旋死亡保險：超限後清空累積器', () => {
   assert.equal(loop.accumulator, 0);
 });
 
+test('start() 在頁面已隱藏時直接使用 interval 後備而非 rAF', () => {
+  const g = globalThis;
+  const saved = { doc: g.document, raf: g.requestAnimationFrame, caf: g.cancelAnimationFrame };
+  let rafCalls = 0;
+  g.document = { hidden: true, addEventListener() {}, removeEventListener() {} };
+  g.requestAnimationFrame = () => { rafCalls++; return 1; };
+  g.cancelAnimationFrame = () => {};
+  try {
+    const loop = new GameLoop({ update() {} });
+    loop.start();
+    assert.equal(rafCalls, 0, '隱藏狀態不應排 rAF');
+    assert.ok(loop._interval, '應建立 setInterval 後備');
+    loop.stop();
+  } finally {
+    g.document = saved.doc;
+    g.requestAnimationFrame = saved.raf;
+    g.cancelAnimationFrame = saved.caf;
+  }
+});
+
 test('mulberry32：同種子重現、不同種子相異、值域 [0,1)', () => {
   const a = mulberry32(42);
   const b = mulberry32(42);
