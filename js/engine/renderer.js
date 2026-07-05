@@ -10,7 +10,22 @@ import {
   buildTypewriterMesh,
   buildPickupMesh,
   buildSurvivorMesh,
+  buildHunterMesh,
+  buildLurkerMesh,
+  buildSpiderMesh,
+  buildCreeperMesh,
+  buildBloaterMesh,
 } from './meshes.js';
+
+const ENEMY_BUILDERS = {
+  zombie: buildZombieMesh,
+  dog: buildDogMesh,
+  hunter: buildHunterMesh,
+  lurker: buildLurkerMesh,
+  spider: buildSpiderMesh,
+  creeper: buildCreeperMesh,
+  bloater: buildBloaterMesh,
+};
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
 const EXT_HEIGHT = { zombie: 1.75, dog: 0.66 }; // dog 實測補償：探測姿勢低頭、遊戲姿勢抬頭
@@ -181,9 +196,7 @@ export class Renderer {
     const group =
       this._extModels && this._extModels.get(type)
         ? this._makeExternalEnemy(type)
-        : type === 'dog'
-          ? buildDogMesh()
-          : buildZombieMesh();
+        : (ENEMY_BUILDERS[type] || buildZombieMesh)();
     this.scene.add(group);
     this.enemyMeshes.set(id, group);
   }
@@ -394,9 +407,16 @@ export class Renderer {
     if (e.dead) {
       g.rotation.x = -Math.PI / 2;
       g.position.y = 0.22;
+      g.scale.setScalar(1);
     } else {
-      g.position.y = 0;
+      g.position.y = e.yOffset || 0; // 潛伏者貼天花板等狀態位移
       g.rotation.x = e.state === 'stagger' ? 0.18 : e.state === 'windup' ? -0.12 : 0;
+      // 脹屍鼓脹（依狀態時間決定，非動畫回呼）
+      if (e.type === 'bloater' && e.state === 'swell') {
+        g.scale.setScalar(1 + Math.min(0.5, e.stateTime * 0.45));
+      } else if (g.scale.x !== 1) {
+        g.scale.setScalar(1);
+      }
     }
   }
 
@@ -640,23 +660,33 @@ export class Renderer {
   }
 
   updateCamera(player) {
-    // 走路搖晃＋受擊震動：純裝飾，只影響相機呈現，不回寫遊戲狀態
+    // 視覺平滑：邏輯 60Hz、螢幕可能 60/90/120Hz——直接取邏輯位置會有
+    // 週期性微步進（走路抖動）。相機位置在渲染側做指數平滑（純裝飾，
+    // 不回寫遊戲狀態；收斂 ~45ms，體感無延遲）
+    const now = performance.now();
+    const fdt = Math.min(0.05, (now - (this._lastFrameT || now)) / 1000);
+    this._lastFrameT = now;
+    if (!this._smooth) this._smooth = { x: player.x, z: player.z };
+    const k = 1 - Math.exp(-fdt * 24);
+    this._smooth.x += (player.x - this._smooth.x) * k;
+    this._smooth.z += (player.z - this._smooth.z) * k;
+
     const moved = this._lastCam
-      ? Math.hypot(player.x - this._lastCam[0], player.z - this._lastCam[1])
+      ? Math.hypot(this._smooth.x - this._lastCam[0], this._smooth.z - this._lastCam[1])
       : 0;
-    this._lastCam = [player.x, player.z];
+    this._lastCam = [this._smooth.x, this._smooth.z];
     if (moved > 0.0005) this._bobPhase += Math.min(moved, 0.12) * 22;
-    const bob = Math.sin(this._bobPhase) * 0.022;
+    const bob = Math.sin(this._bobPhase) * 0.014;
     let sx = 0;
     let sy = 0;
     if (this._shake > 0.001) {
       sx = (Math.random() - 0.5) * this._shake;
       sy = (Math.random() - 0.5) * this._shake;
     }
-    this.camera.position.set(player.x + sx, player.eyeHeight + bob + sy, player.z);
+    this.camera.position.set(this._smooth.x + sx, player.eyeHeight + bob + sy, this._smooth.z);
     this.camera.rotation.y = player.yaw;
     this.camera.rotation.x = player.pitch;
-    this.camera.rotation.z = Math.sin(this._bobPhase * 0.5) * 0.006;
+    this.camera.rotation.z = Math.sin(this._bobPhase * 0.5) * 0.003;
   }
 
   resize(w, h) {

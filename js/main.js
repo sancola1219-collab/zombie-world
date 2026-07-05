@@ -14,7 +14,14 @@ import { Projectiles } from './game/projectiles.js';
 import { castShot, jitterDir } from './game/combat.js';
 import { Zombie } from './game/enemies/zombie.js';
 import { Dog } from './game/enemies/dog.js';
+import { Hunter } from './game/enemies/hunter.js';
+import { Lurker } from './game/enemies/lurker.js';
+import { Spider } from './game/enemies/spider.js';
+import { Creeper } from './game/enemies/creeper.js';
+import { Bloater } from './game/enemies/bloater.js';
 import { separateEnemies } from './game/enemies/base.js';
+
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater };
 import { buildSave, applySave } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { STORY1 } from './levels/story1.js';
@@ -64,8 +71,8 @@ function boot() {
   // === 實體 ===
   const pickups = new Map(); // id → {item, count, x, z}
   let takenPickups = new Set();
-  const enemies = LEVEL.entities.enemies.map((d) =>
-    d.type === 'dog' ? new Dog({ id: d.id, x: d.x, z: d.z }) : new Zombie({ id: d.id, x: d.x, z: d.z })
+  const enemies = LEVEL.entities.enemies.map(
+    (d) => new (ENEMY_TYPES[d.type] || Zombie)({ id: d.id, x: d.x, z: d.z })
   );
   const applyDifficultyHp = () => {
     for (const e of enemies) {
@@ -556,6 +563,18 @@ function boot() {
     },
     sound(name) {
       audio.play(name);
+    },
+    poison(seconds) {
+      const was = player.poison > 0;
+      player.poison = Math.max(player.poison, seconds);
+      if (!was) hintFlash('中毒了——找藍色草藥解毒', 3.2);
+    },
+    boom(x, y, z) {
+      renderer.explosion(x, y, z);
+      audio.play('explosion');
+      for (const e of enemies) {
+        if (!e.dead && Math.hypot(e.x - x, e.z - z) < 2.5) e.hurt(60, 'body');
+      }
     },
   };
 

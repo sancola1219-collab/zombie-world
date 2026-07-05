@@ -314,6 +314,119 @@ export function buildDogMesh() {
   return g;
 }
 
+// === 五種變異體（皆為原創設計，程序生成） ===
+
+// 獵痕者：蛙型獵殺生物——蹲伏、大腿粗壯、前爪
+export function buildHunterMesh() {
+  const g = new THREE.Group();
+  const hide = mat(0x4a6a3c);
+  const hideDark = mat(0x38512c);
+  const claw = mat(0xd8d2b8);
+  blob(g, hide, 0.16, 1.4, 1.1, 1.5, 0, 0.72, 0.05, 0.5);      // 前傾軀幹
+  blob(g, hideDark, 0.1, 1.2, 1, 1.1, 0, 1.15, -0.18);          // 頭
+  blob(g, mat(0xc7b23a), 0.02, 1.4, 1, 0.6, -0.05, 1.18, -0.27); // 黃眼
+  blob(g, mat(0xc7b23a), 0.02, 1.4, 1, 0.6, 0.05, 1.18, -0.27);
+  cap(g, hide, 0.09, 0.3, -0.24, 0.45, 0.12, 0.7);              // 蹲伏大腿
+  cap(g, hide, 0.09, 0.3, 0.24, 0.45, 0.12, 0.7);
+  cap(g, hideDark, 0.05, 0.28, -0.26, 0.2, -0.08, 1.5);         // 小腿前折
+  cap(g, hideDark, 0.05, 0.28, 0.26, 0.2, -0.08, 1.5);
+  cap(g, hide, 0.05, 0.3, -0.2, 0.85, -0.25, 1.2);              // 前伸臂
+  cap(g, hide, 0.05, 0.3, 0.2, 0.85, -0.25, 1.2);
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      cap(g, claw, 0.012, 0.09, sx * (0.16 + i * 0.04), 0.62, -0.42 - i * 0.01, 1.3); // 爪
+    }
+  }
+  g.userData.kind = 'hunter';
+  return g;
+}
+
+// 潛伏者：無皮爬行者——低伏、外露肌理、長舌
+export function buildLurkerMesh() {
+  const g = new THREE.Group();
+  const flesh = mat(0x8a3028);
+  const fleshDark = mat(0x5e1e18);
+  const bone = mat(0xcfc9b8);
+  blob(g, flesh, 0.14, 1.9, 0.85, 1.3, 0, 0.42, 0.05);          // 低伏軀幹
+  blob(g, fleshDark, 0.09, 1, 0.9, 1.1, 0, 0.5, -0.3);          // 頭
+  blob(g, mat(0xd8b0b0), 0.06, 1.2, 0.7, 1, 0, 0.62, -0.28);    // 外露腦
+  cap(g, mat(0xb05a6a), 0.018, 0.5, 0, 0.42, -0.62, 1.35);      // 垂出的長舌
+  for (const [sx, sz] of [[-0.22, -0.15], [0.22, -0.15], [-0.2, 0.28], [0.2, 0.28]]) {
+    cap(g, flesh, 0.045, 0.3, sx, 0.28, sz, 0.3, 0, sx > 0 ? -0.9 : 0.9); // 攤開的四肢
+    blob(g, bone, 0.02, 1, 0.6, 1.4, sx * 1.5, 0.08, sz);       // 爪端
+  }
+  g.userData.kind = 'lurker';
+  return g;
+}
+
+// 巨蛛：腹部渾圓、八足、多眼
+export function buildSpiderMesh() {
+  const g = new THREE.Group();
+  const chitin = mat(0x2e2620);
+  const chitinDark = mat(0x1e1814);
+  blob(g, chitin, 0.3, 1.1, 0.9, 1.25, 0, 0.5, 0.28);           // 腹
+  blob(g, mat(0x4a3626), 0.06, 1, 0.7, 2.2, 0, 0.72, 0.28);     // 腹紋
+  blob(g, chitinDark, 0.16, 1.1, 0.8, 1, 0, 0.42, -0.22);       // 頭胸
+  for (let i = 0; i < 4; i++) {
+    blob(g, mat(0x8a1010), 0.016, 1, 1, 0.6, -0.09 + i * 0.06, 0.5, -0.36); // 眼列
+  }
+  cap(g, chitinDark, 0.02, 0.14, -0.06, 0.3, -0.4, 1.1);        // 螯肢
+  cap(g, chitinDark, 0.02, 0.14, 0.06, 0.3, -0.4, 1.1);
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 4; i++) {
+      const z = -0.28 + i * 0.18;
+      cap(g, chitin, 0.022, 0.42, sx * 0.42, 0.5, z, 0, 0, sx * 1.1);  // 上段外張
+      cap(g, chitinDark, 0.016, 0.36, sx * 0.68, 0.22, z, 0, 0, sx * 0.35); // 下段觸地
+    }
+  }
+  g.userData.kind = 'spider';
+  return g;
+}
+
+// 蔓噬花：食人巨花——根丘、莖、花苞頭、外翻花瓣、觸蔓
+export function buildCreeperMesh() {
+  const g = new THREE.Group();
+  const vine = mat(0x3c5a2e);
+  const vineDark = mat(0x2a4020);
+  const petal = mat(0x7a2848);
+  const maw = mat(0x481018);
+  blob(g, vineDark, 0.4, 1.3, 0.5, 1.3, 0, 0.16, 0);            // 根丘
+  cyl(g, vine, 0.1, 0.16, 0.9, 8, 0, 0.7, 0);                   // 主莖
+  blob(g, maw, 0.22, 1, 1.15, 1, 0, 1.45, 0);                   // 花苞頭（口）
+  box(g, mat(0xd8d2b8), 0.2, 0.02, 0.02, 0, 1.38, -0.19, 0.3);  // 齒列
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    blob(g, petal, 0.16, 0.6, 1.6, 0.25, Math.cos(a) * 0.24, 1.42, Math.sin(a) * 0.24, Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9); // 外翻花瓣
+  }
+  cap(g, vine, 0.035, 0.5, -0.4, 0.5, -0.15, 0.5, 0, 0.9);      // 觸蔓
+  cap(g, vine, 0.035, 0.45, 0.42, 0.45, 0.1, 0.4, 0, -0.8);
+  cap(g, vineDark, 0.03, 0.4, 0.1, 0.4, 0.42, -0.7, 0, 0.2);
+  g.userData.kind = 'creeper';
+  return g;
+}
+
+// 脹屍：鼓脹欲裂的軀體、病變膿瘤
+export function buildBloaterMesh() {
+  const g = new THREE.Group();
+  const skin = mat(0x7a8060);
+  const bloat = mat(0x8a9058);
+  const tumor = mat(0xa8b040);
+  const dark = mat(0x50563c);
+  cap(g, dark, 0.09, 0.35, -0.12, 0.4, 0, 0, 0, -0.1);          // 短腿
+  cap(g, dark, 0.09, 0.35, 0.12, 0.4, 0, 0, 0, 0.1);
+  blob(g, bloat, 0.34, 1.15, 1.2, 1.05, 0, 0.95, 0);            // 鼓脹軀體
+  blob(g, tumor, 0.09, 1, 0.85, 0.9, -0.24, 1.05, -0.2);        // 膿瘤
+  blob(g, tumor, 0.07, 1, 1, 0.8, 0.26, 0.8, -0.18);
+  blob(g, tumor, 0.06, 1.2, 0.8, 0.8, 0.05, 1.25, -0.26);
+  blob(g, skin, 0.09, 1, 0.95, 1, 0, 1.5, -0.05);               // 陷進肩膀的頭
+  blob(g, mat(0x14140f), 0.018, 1.3, 1, 0.6, -0.035, 1.52, -0.135); // 眼
+  blob(g, mat(0x14140f), 0.018, 1.3, 1, 0.6, 0.035, 1.52, -0.135);
+  cap(g, skin, 0.05, 0.28, -0.36, 1.0, 0, 0, 0, 0.5);           // 短臂
+  cap(g, skin, 0.05, 0.28, 0.37, 1.0, 0, 0, 0, -0.5);
+  g.userData.kind = 'bloater';
+  return g;
+}
+
 // === 倖存者 NPC（白袍研究員，站姿，無傷） ===
 
 export function buildSurvivorMesh() {

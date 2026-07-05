@@ -101,6 +101,7 @@ export class Player {
     }
     // Danger（HP<33）跛行減速——經典設計
     const speed = (actions.run ? RUN_SPEED : WALK_SPEED) * (this.hp < 33 ? 0.8 : 1);
+    this.running = !!(actions.run && len > 0.01); // 供潛伏者等 AI 感知
     let nx = this.x + dirX * speed * dt;
     let nz = this.z + dirZ * speed * dt;
 

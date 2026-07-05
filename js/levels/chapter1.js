@@ -153,6 +153,8 @@ export const CHAPTER1 = {
       { id: 'p-ws-flamer', item: 'flamethrower_weapon', count: 1, x: 15.5, z: 24.3 },
       { id: 'p-ws-fuel', item: 'fuel', count: 50, x: 16.4, z: 24.5 },
       { id: 'p-ws-herb', item: 'green_herb', count: 1, x: 23, z: 20 },
+      // 管線區：解毒補給（巨蛛毒的對策）
+      { id: 'p-fp-blue', item: 'blue_herb', count: 1, x: 6.5, z: 20.5 },
       // 貨梯間
       { id: 'p-fr-ammo', item: 'handgun_ammo', count: 15, x: 26.5, z: 13 },
       // 連通道：倒下警衛的衝鋒槍
@@ -174,6 +176,14 @@ export const CHAPTER1 = {
       { id: 'z-ws2', type: 'zombie', x: 22, z: 21 },
       { id: 'z-ec1', type: 'zombie', x: 33.5, z: 14.5 },
       { id: 'dog-ec', type: 'dog', x: 36.5, z: 13 },
+      // === 變異體（KY 洩漏的產物）===
+      { id: 'lurker-wh', type: 'lurker', x: 20, z: 12.5 },   // 倉儲貨架頂的天花板爬行者
+      { id: 'spider-fp', type: 'spider', x: 10, z: 22 },     // 管線區巨蛛
+      { id: 'spider-re', type: 'spider', x: 11, z: 9.5 },    // 反應槽區巨蛛
+      { id: 'creeper-ws', type: 'creeper', x: 18.5, z: 23.2 }, // 廢液區蔓噬花（守著噴火器）
+      { id: 'bloater-ws', type: 'bloater', x: 21.5, z: 24 }, // 廢液區脹屍
+      { id: 'bloater-er', type: 'bloater', x: 1.5, z: 22 },  // E區脹屍（前技術員）
+      { id: 'hunter-ec', type: 'hunter', x: 38.5, z: 15.5 }, // 連通道盡頭：逃脫的實驗體
     ],
     typewriters: [
       { id: 'tw-office', x: 0.8, z: 4.2 },

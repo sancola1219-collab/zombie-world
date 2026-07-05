@@ -54,7 +54,15 @@ export class GameLoop {
       cancelAnimationFrame(this._raf);
       clearInterval(this._interval);
       if (document.hidden) {
-        this._interval = setInterval(() => this.tick(performance.now() / 1000), 50);
+        this._interval = setInterval(() => {
+          // 自我修復：若視窗其實已可見（某些瀏覽器漏發 visibilitychange），
+          // 立刻切回 rAF，避免以 interval 節流頻率驅動造成畫面抖動
+          if (!document.hidden) {
+            startDriver();
+            return;
+          }
+          this.tick(performance.now() / 1000);
+        }, 50);
       } else {
         this._raf = requestAnimationFrame(rafStep);
       }
