@@ -32,18 +32,20 @@ export class Renderer {
 
     // 光強單位是物理量（燭光），數值要比直覺大得多——
     // 以下數值經像素取樣調校：光圈中心約 100/255、暗部個位數，勿憑感覺改
-    this.scene.add(new THREE.AmbientLight(0x50505e, 1.0));
+    this.scene.add(new THREE.AmbientLight(0x50505e, 1.15));
 
-    // 手電筒：掛在相機上、微偏右下，照向前方
-    this._flash = new THREE.SpotLight(0xfff0d2, 450, 16, 0.55, 0.6, 1.4);
+    // 手電筒：decay=0 零距離衰減——光圈內亮度恆定（電影式而非物理式）。
+    // 物理衰減會讓近身敵人吃到十幾倍光強直接爆白（v2.5.2 的雪人 bug），
+    // 遠處變暗交給霧與聚光角度衰減即可
+    this._flash = new THREE.SpotLight(0xfff0d2, 3.2, 18, 0.55, 0.6, 0);
     this._flash.position.set(0.12, -0.08, 0);
     this._flashTarget = new THREE.Object3D();
     this._flashTarget.position.set(0, -0.1, -6);
     this.camera.add(this._flash, this._flashTarget);
     this._flash.target = this._flashTarget;
 
-    // 貼身微光：讓腳邊與極近物在光圈外仍隱約可辨
-    this._fill = new THREE.PointLight(0xffe8c8, 5, 5, 1.6);
+    // 貼身微光：同樣零衰減、低強度，只求光圈外隱約可辨
+    this._fill = new THREE.PointLight(0xffe8c8, 0.3, 5, 0);
     this.camera.add(this._fill);
 
     this.roomGroups = new Map();
@@ -261,6 +263,8 @@ export class Renderer {
   }
 
   // === 視角武器模型 ===
+  // 獨立渲染通道：自己的場景與燈光——不受世界光影響（不會被手電筒
+  // 近距爆白），且清深度後再畫，槍永遠不會插進牆裡。
 
   _buildViewmodels() {
     this._vms = {
@@ -269,14 +273,25 @@ export class Renderer {
       shotgun: buildWeaponModel('shotgun'),
       magnum: buildWeaponModel('magnum'),
     };
+    this.vmScene = new THREE.Scene();
+    this.vmCamera = new THREE.PerspectiveCamera(62, 1, 0.01, 10);
+    this.vmScene.add(new THREE.AmbientLight(0x9a9aa8, 1.5));
+    const key = new THREE.DirectionalLight(0xfff0d2, 2.8);
+    key.position.set(0.6, 1, 0.4);
+    this.vmScene.add(key);
+    this._vmMuzzle = new THREE.PointLight(0xffcc88, 0, 2.5, 1.6);
+    this._vmMuzzle.position.set(0.2, -0.1, -0.7);
+    this.vmScene.add(this._vmMuzzle);
+
     this._vmRoot = new THREE.Group();
     this._vmRoot.position.set(0.24, -0.2, -0.45);
     for (const g of Object.values(this._vms)) {
       g.visible = false;
       this._vmRoot.add(g);
     }
-    this.camera.add(this._vmRoot);
+    this.vmScene.add(this._vmRoot);
     this._vmKick = 0;
+    this.renderer.autoClear = false;
   }
 
   setWeaponView(id) {
@@ -312,6 +327,8 @@ export class Renderer {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.vmCamera.aspect = w / h;
+    this.vmCamera.updateProjectionMatrix();
   }
 
   render() {
@@ -319,8 +336,11 @@ export class Renderer {
     const dt = 1 / 60;
     if (this._muzzle.intensity > 0.5) this._muzzle.intensity *= 0.62;
     else this._muzzle.intensity = 0;
+    if (this._vmMuzzle.intensity > 0.3) this._vmMuzzle.intensity *= 0.62;
+    else this._vmMuzzle.intensity = 0;
     this._vmKick *= 0.8;
     this._vmRoot.position.z = -0.45 + this._vmKick;
+    this._vmRoot.position.y = -0.2 + Math.sin(this._bobPhase) * 0.007; // 武器隨步伐微晃
     this._shake *= 0.86;
     for (const m of this.pickupMeshes.values()) (m.userData.spin || m).rotation.y += 0.02;
 
@@ -368,7 +388,10 @@ export class Renderer {
         this._bloodBursts.splice(i, 1);
       }
     }
+    this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+    this.renderer.clearDepth();
+    this.renderer.render(this.vmScene, this.vmCamera);
   }
 }
 

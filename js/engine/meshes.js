@@ -1,4 +1,4 @@
-// 程序 3D 模型工廠：武器視角模型、敵人、打字機、拾取物。
+﻿// 程序 3D 模型工廠：武器視角模型、敵人、打字機、拾取物。
 // 全部程式生成（多零件低多邊形），供 renderer 使用；外部 .glb 存在時由 models.js 熱替換。
 import * as THREE from 'three';
 import { getTexture } from './textures.js';
@@ -17,6 +17,25 @@ function box(parent, material, w, h, d, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz 
 
 function cyl(parent, material, rTop, rBot, h, seg, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, seg), material);
+  m.position.set(x, y, z);
+  m.rotation.set(rx, ry, rz);
+  parent.add(m);
+  return m;
+}
+
+// 膠囊體（沿 Y 軸），四肢軀幹的圓潤基元
+function cap(parent, material, r, len, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 10), material);
+  m.position.set(x, y, z);
+  m.rotation.set(rx, ry, rz);
+  parent.add(m);
+  return m;
+}
+
+// 橢球（縮放球體），顱骨/軀幹/斑塊用
+function blob(parent, material, r, sx, sy, sz, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), material);
+  m.scale.set(sx, sy, sz);
   m.position.set(x, y, z);
   m.rotation.set(rx, ry, rz);
   parent.add(m);
@@ -81,75 +100,122 @@ export function buildWeaponModel(id) {
   return g;
 }
 
-// === 殭屍（高約 1.7，原點在腳底，面向 -z） ===
+// === 殭屍（高約 1.68，原點在腳底，面向 -z）===
+// v3 全膠囊/橢球建模：圓潤人體、腐斑、頸部咬傷、露肋、鼓脹腹部、破衣赤足。
 
 export function buildZombieMesh() {
   const g = new THREE.Group();
-  const skin = mat(0x8a927a);
-  const skinDark = mat(0x6d745e);
-  const cloth = mat(0x2f333c);
-  const clothDark = mat(0x252932);
-  const blood = mat(0x481010);
-  const eye = mat(0x0c0c10);
+  const skin = mat(0x93987f);
+  const skinShade = mat(0x767c66);
+  const rot = mat(0x565c48);
+  const bone = mat(0xcfc9b8);
+  const blood = mat(0x3c0d0d);
+  const shirt = mat(0x3b4350);
+  const shirtDark = mat(0x303844);
+  const pants = mat(0x2f2b27);
+  const eyeDark = mat(0x121216);
+  const hair = mat(0x2a2620);
 
-  const makeLeg = (x, m) => {
-    const leg = new THREE.Group();
-    leg.position.set(x, 0.84, 0);
-    box(leg, m, 0.14, 0.4, 0.16, 0, -0.2, 0);                 // 大腿
-    box(leg, m, 0.12, 0.4, 0.14, 0, -0.58, 0.02, 0.08);       // 小腿（微屈）
-    box(leg, skinDark, 0.12, 0.06, 0.22, 0, -0.8, -0.04);     // 赤足
-    g.add(leg);
-    return leg;
-  };
-  const legL = makeLeg(-0.11, cloth);
-  const legR = makeLeg(0.11, clothDark);
+  // --- 左腿（完整褲管） ---
+  const legL = new THREE.Group();
+  legL.position.set(-0.11, 0.86, 0);
+  legL.rotation.y = 0.14; // 外八
+  cap(legL, pants, 0.062, 0.26, 0, -0.16, 0, -0.06);          // 大腿
+  blob(legL, pants, 0.055, 1, 0.8, 1, 0, -0.34, 0.01);         // 膝
+  cap(legL, pants, 0.05, 0.26, 0, -0.55, 0.03, 0.17);          // 小腿
+  blob(legL, skinShade, 0.05, 1.1, 0.5, 2.1, 0, -0.83, -0.05); // 赤足
+  blob(legL, skin, 0.028, 1.4, 0.5, 1, 0, -0.85, -0.15);       // 趾
+  g.add(legL);
 
+  // --- 右腿（褲管撕裂露小腿） ---
+  const legR = new THREE.Group();
+  legR.position.set(0.11, 0.86, 0);
+  legR.rotation.y = -0.1;
+  cap(legR, pants, 0.062, 0.2, 0, -0.13, 0, -0.06);
+  box(legR, pants, 0.05, 0.07, 0.02, -0.03, -0.26, -0.05, 0, 0, 0.3);  // 破褲襬
+  box(legR, pants, 0.045, 0.06, 0.02, 0.035, -0.25, 0.045, 0, 0, -0.25);
+  blob(legR, skin, 0.052, 1, 0.8, 1, 0, -0.33, 0.01);          // 膝（露膚）
+  cap(legR, skin, 0.046, 0.26, 0, -0.55, 0.03, 0.17);          // 小腿（露膚）
+  blob(legR, rot, 0.03, 1.2, 1.6, 0.5, 0.02, -0.55, -0.075);   // 小腿腐斑
+  blob(legR, skinShade, 0.05, 1.1, 0.5, 2.1, 0, -0.83, -0.05);
+  blob(legR, skin, 0.028, 1.4, 0.5, 1, 0, -0.85, -0.15);
+  g.add(legR);
+
+  // --- 軀幹 ---
   const torso = new THREE.Group();
-  torso.position.y = 0.8;
-  torso.rotation.x = 0.3;                                     // 駝背前傾
-  box(torso, clothDark, 0.4, 0.16, 0.24, 0, 0.05, 0);         // 骨盆
-  box(torso, cloth, 0.42, 0.26, 0.24, 0, 0.26, 0);            // 腹部
-  box(torso, blood, 0.2, 0.16, 0.02, 0.06, 0.3, -0.125);      // 胸前血漬
-  box(torso, cloth, 0.48, 0.34, 0.28, 0, 0.55, 0);            // 胸膛
+  torso.position.y = 0.86;
+  torso.rotation.x = 0.28;                                     // 前傾
+  torso.rotation.z = 0.05;                                     // 微側傾
+  blob(torso, pants, 0.1, 1.7, 1.0, 1.2, 0, 0.02, 0);          // 骨盆
+  blob(torso, skin, 0.11, 1.5, 1.25, 1.2, 0, 0.22, -0.045);    // 鼓脹的腹（從破衣下露出）
+  blob(torso, rot, 0.045, 1.4, 1, 0.5, 0.05, 0.24, -0.155);    // 腹部腐斑
+  blob(torso, shirt, 0.12, 1.75, 1.5, 1.15, 0, 0.47, 0);       // 胸膛（襯衫）
   // 破爛衣襬
-  box(torso, cloth, 0.1, 0.12, 0.02, -0.14, -0.03, -0.12, 0, 0, 0.3);
-  box(torso, clothDark, 0.08, 0.1, 0.02, 0.05, -0.05, -0.12, 0, 0, -0.2);
-  box(torso, cloth, 0.09, 0.11, 0.02, 0.16, -0.02, 0.12, 0, 0, 0.25);
-  cyl(torso, skin, 0.055, 0.06, 0.09, 8, 0, 0.76, -0.03);     // 頸
+  box(torso, shirtDark, 0.1, 0.1, 0.015, -0.13, 0.3, -0.115, 0.1, 0, 0.35);
+  box(torso, shirt, 0.08, 0.09, 0.015, 0.02, 0.28, -0.125, 0.1, 0, -0.15);
+  box(torso, shirtDark, 0.09, 0.08, 0.015, 0.15, 0.31, -0.1, 0.1, 0, 0.2);
+  blob(torso, shirt, 0.075, 1, 0.85, 1, -0.235, 0.62, 0);      // 肩
+  blob(torso, shirtDark, 0.075, 1, 0.85, 1, 0.24, 0.585, 0.01); // 垂肩
+  cap(torso, skin, 0.048, 0.05, 0.01, 0.72, -0.02, 0.15);      // 頸
+  // 頸側咬傷＋血streak
+  blob(torso, blood, 0.05, 1, 0.8, 0.8, 0.1, 0.67, -0.04);
+  box(torso, blood, 0.05, 0.2, 0.012, 0.11, 0.5, -0.136, 0, 0, 0.12);
+  // 左肋外露：暗色創口＋三根肋骨
+  blob(torso, blood, 0.055, 1.2, 1.1, 0.5, -0.13, 0.4, -0.11);
+  cap(torso, bone, 0.008, 0.07, -0.13, 0.35, -0.128, 0, 0, 1.35);
+  cap(torso, bone, 0.008, 0.075, -0.13, 0.4, -0.132, 0, 0, 1.3);
+  cap(torso, bone, 0.008, 0.07, -0.13, 0.45, -0.128, 0, 0, 1.25);
 
+  // --- 頭 ---
   const head = new THREE.Group();
-  head.position.set(0.02, 0.88, -0.04);
-  head.rotation.z = 0.25;                                     // 歪頭
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.155, 12, 10), skin);
-  head.add(skull);
-  box(head, skinDark, 0.11, 0.055, 0.1, 0, -0.12, -0.05, 0.5); // 張開的下顎
-  box(head, eye, 0.034, 0.026, 0.02, -0.055, 0.02, -0.135);   // 凹陷眼窩
-  box(head, eye, 0.034, 0.026, 0.02, 0.055, 0.02, -0.135);
-  box(head, blood, 0.05, 0.1, 0.02, 0.07, -0.05, -0.13, 0, 0, 0.2); // 臉側血痕
+  head.position.set(0.015, 0.78, -0.05);
+  head.rotation.z = 0.3;                                       // 歪頭
+  head.rotation.x = 0.12;
+  blob(head, skin, 0.095, 1.0, 1.18, 1.05, 0, 0.06, 0);        // 顱
+  blob(head, skinShade, 0.075, 1.0, 0.9, 0.88, 0, 0.015, -0.045); // 面頰
+  blob(head, hair, 0.09, 1.0, 0.55, 1.0, -0.01, 0.135, 0.015); // 稀疏頭髮
+  blob(head, skin, 0.055, 1.3, 0.5, 1.0, 0.03, 0.15, -0.02);   // 禿斑
+  blob(head, eyeDark, 0.02, 1.4, 1.1, 0.6, -0.04, 0.055, -0.085); // 眼窩
+  blob(head, eyeDark, 0.02, 1.4, 1.1, 0.6, 0.04, 0.055, -0.085);
+  blob(head, skinShade, 0.016, 1, 1.2, 1, 0, 0.02, -0.1);      // 塌鼻
+  blob(head, skinShade, 0.05, 1.0, 0.55, 0.85, 0, -0.075, -0.045, 0.5); // 下垂張顎
+  blob(head, eyeDark, 0.03, 1.2, 0.5, 0.7, 0, -0.045, -0.075); // 口腔陰影
+  box(head, mat(0xb8b09a), 0.05, 0.012, 0.012, 0, -0.028, -0.088); // 上排牙
+  blob(head, blood, 0.028, 1, 1.4, 0.5, -0.055, 0.09, -0.062); // 額側血痕
   torso.add(head);
 
-  const armF = new THREE.Group();                             // 前伸手臂
-  armF.position.set(-0.26, 0.6, -0.03);
-  armF.rotation.x = 0.1;
-  box(armF, cloth, 0.11, 0.11, 0.14, 0, 0, -0.06);            // 破袖
-  box(armF, skinDark, 0.09, 0.09, 0.22, 0, 0, -0.22);         // 上臂
-  box(armF, skinDark, 0.08, 0.08, 0.24, 0, -0.015, -0.44, 0.12); // 前臂（肘微垂）
-  box(armF, skin, 0.085, 0.035, 0.1, 0, -0.045, -0.58, 0.25); // 手掌
-  box(armF, skin, 0.02, 0.025, 0.06, -0.025, -0.06, -0.64, 0.35); // 手指
-  box(armF, skin, 0.02, 0.025, 0.06, 0.005, -0.06, -0.65, 0.4);
-  box(armF, skin, 0.02, 0.025, 0.055, 0.03, -0.06, -0.635, 0.3);
+  // --- 前伸的手臂（右） ---
+  const armF = new THREE.Group();
+  armF.position.set(-0.24, 0.6, -0.02);
+  armF.rotation.x = 0.05;
+  cap(armF, shirt, 0.052, 0.1, 0, 0, -0.07, Math.PI / 2);      // 破袖
+  cap(armF, skin, 0.042, 0.17, 0, -0.01, -0.23, Math.PI / 2 + 0.06); // 上臂
+  blob(armF, skin, 0.042, 1, 1, 1, 0, -0.025, -0.35);          // 肘
+  cap(armF, skin, 0.037, 0.18, 0, -0.05, -0.47, Math.PI / 2 + 0.22); // 前臂
+  blob(armF, rot, 0.028, 1.5, 0.6, 1.1, 0, -0.07, -0.45);      // 前臂腐斑
+  blob(armF, skinShade, 0.035, 1, 0.55, 1.35, 0, -0.095, -0.6, 0.35); // 手掌
+  cap(armF, skinShade, 0.007, 0.05, -0.025, -0.115, -0.655, 1.15);   // 手指（張抓）
+  cap(armF, skinShade, 0.007, 0.05, -0.005, -0.12, -0.665, 1.25);
+  cap(armF, skinShade, 0.007, 0.048, 0.015, -0.118, -0.66, 1.2);
+  cap(armF, skinShade, 0.007, 0.042, 0.033, -0.11, -0.645, 1.05);
   torso.add(armF);
 
-  const armD = new THREE.Group();                             // 垂盪手臂
-  armD.position.set(0.28, 0.62, 0);
-  armD.rotation.z = 0.14;
-  box(armD, clothDark, 0.11, 0.14, 0.11, 0, -0.05, 0);        // 破袖
-  box(armD, skin, 0.085, 0.24, 0.085, 0, -0.22, 0);           // 上臂
-  box(armD, skin, 0.075, 0.26, 0.075, 0.01, -0.46, 0.02, 0.12); // 前臂
-  box(armD, skinDark, 0.08, 0.09, 0.04, 0.015, -0.62, 0.03);  // 垂著的手
+  // --- 垂盪的手臂（左） ---
+  const armD = new THREE.Group();
+  armD.position.set(0.245, 0.585, 0.01);
+  armD.rotation.z = 0.12;
+  cap(armD, shirtDark, 0.055, 0.09, 0, -0.05, 0);              // 破袖
+  cap(armD, skin, 0.04, 0.17, 0, -0.22, 0.005, 0.06);          // 上臂
+  blob(armD, skin, 0.038, 1, 1, 1, 0, -0.345, 0.015);          // 肘
+  cap(armD, skin, 0.035, 0.18, 0.005, -0.475, 0.025, 0.1);     // 前臂
+  box(armD, blood, 0.012, 0.11, 0.04, 0.038, -0.47, 0.025, 0, 0, 0.1); // 前臂撕裂傷
+  blob(armD, skinShade, 0.034, 1, 1.3, 0.6, 0.01, -0.615, 0.04); // 垂手
+  cap(armD, skinShade, 0.0065, 0.04, 0.0, -0.67, 0.045, 0.25);
+  cap(armD, skinShade, 0.0065, 0.04, 0.02, -0.665, 0.04, 0.2);
+  cap(armD, skinShade, 0.0065, 0.036, -0.02, -0.665, 0.045, 0.3);
   torso.add(armD);
 
-  g.add(legL, legR, torso);
+  g.add(torso);
   g.userData.parts = { legL, legR, armF, armD, torso };
   g.userData.kind = 'zombie';
   g.userData.phase = Math.random() * Math.PI * 2;
