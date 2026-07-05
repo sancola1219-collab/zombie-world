@@ -7,6 +7,8 @@ export const ITEMS = {
   first_aid_spray: { name: '急救噴霧', type: 'heal', stack: 1, desc: '完全恢復生命' },
   blue_herb: { name: '藍色草藥', type: 'heal', stack: 3, desc: '解除中毒' },
   keycard: { name: '貨梯鑰匙卡', type: 'key', desc: '晨星工業的門禁卡，可開啟貨梯' },
+  labkey: { name: '實驗區通行卡', type: 'key', desc: '生物危害等級4區域的通行卡' },
+  magnum_weapon: { name: '麥格農', type: 'weapon', weapon: 'magnum', rounds: 6 },
   handgun_ammo: { name: '手槍彈', type: 'ammo', stack: 45, weapon: 'handgun' },
   shotgun_shells: { name: '霰彈', type: 'ammo', stack: 21, weapon: 'shotgun' },
   magnum_ammo: { name: '麥格農彈', type: 'ammo', stack: 12, weapon: 'magnum' },

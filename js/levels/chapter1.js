@@ -4,6 +4,9 @@
 export const CHAPTER1 = {
   id: 'chapter1',
   name: '第一章：瞞天過海',
+  next: 'chapter2',
+  exitNeeds: 'gatecode',
+  exitHint: '電子鎖斷電，需要備援密碼——會議室裡也許有線索',
   spawn: { x: 2, z: 2.5, yaw: Math.PI }, // 設備辦公室，面向南（門的方向）
   lockNames: { keycard: '貨梯鑰匙卡', chapterExit: '廠區大門' },
   rooms: [

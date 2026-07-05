@@ -24,7 +24,11 @@ import { separateEnemies } from './game/enemies/base.js';
 const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
+import { CHAPTER2 } from './levels/chapter2.js';
 import { STORY1 } from './levels/story1.js';
+
+const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2 };
+const PROGRESS_KEY = 'zombie-world-progress';
 import { HUD } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';
 
@@ -36,7 +40,7 @@ const DIFFICULTY = {
   standard: { name: '標準', dmg: 1.0, hp: 1.0, ammo: 1.0 },
   hard: { name: '艱難', dmg: 1.4, hp: 1.2, ammo: 0.7 },
 };
-const LEVEL = CHAPTER1;
+let LEVEL = CHAPTER1; // boot 內依進度切換章節
 
 function boot() {
   const container = $('app');
@@ -50,18 +54,22 @@ function boot() {
     return;
   }
 
-  const world = new World(LEVEL);
-  const player = new Player(LEVEL.spawn);
-  const input = new Input();
-  const audio = new AudioEngine();
-  const hud = new HUD();
-  const overlays = new Overlays();
   let saves;
   try {
     saves = new SaveStore(window.localStorage);
   } catch {
     saves = new SaveStore(null);
   }
+  // 章節進度：{ chapter, difficulty, auto }（auto='story' 表示章末銜接直接播開場）
+  const progress = saves.load(PROGRESS_KEY) || {};
+  if (progress.chapter && CHAPTERS[progress.chapter]) LEVEL = CHAPTERS[progress.chapter];
+
+  const world = new World(LEVEL);
+  const player = new Player(LEVEL.spawn);
+  const input = new Input();
+  const audio = new AudioEngine();
+  const hud = new HUD();
+  const overlays = new Overlays();
 
   let inventory = new Inventory();
   let arsenal = new Arsenal();
@@ -212,23 +220,26 @@ function boot() {
   }
 
   // === 標題/難度/劇情選單接線 ===
+  const STORY = { title: LEVEL.name, pages: LEVEL.story || STORY1.pages };
+  if (LEVEL.id === 'chapter1') STORY.title = STORY1.title;
+
   function startStory() {
     storyPage = 0;
     storyChars = 0;
-    $('story-title').textContent = STORY1.title;
+    $('story-title').textContent = STORY.title;
     $('story-text').textContent = '';
     setMode('story');
   }
 
   function advanceStory() {
-    const page = STORY1.pages[storyPage];
+    const page = STORY.pages[storyPage];
     if (storyChars < page.length) {
       storyChars = page.length; // 第一下：整頁顯示
       return;
     }
     storyPage += 1;
     storyChars = 0;
-    if (storyPage >= STORY1.pages.length) beginPlay();
+    if (storyPage >= STORY.pages.length) beginPlay();
   }
 
   function beginPlay() {
@@ -272,7 +283,11 @@ function boot() {
   $('docread').addEventListener('click', () => {
     if (mode === 'read') closeDocument();
   });
-  $('btn-chapend').addEventListener('click', () => window.location.reload());
+  $('btn-chapend').addEventListener('click', () => {
+    saves.remove(PROGRESS_KEY);
+    window.location.reload();
+  });
+  $('btn-nextchap').addEventListener('click', gotoNextChapter);
 
   $('resume').addEventListener('click', () => {
     setMode('play');
@@ -315,6 +330,7 @@ function boot() {
       firedTriggers.add(trg.id);
       hintFlash(trg.text, 3.6);
       if (trg.sound) audio.play(trg.sound);
+      if (trg.shake) renderer.shake(trg.shake);
       if (trg.alert) {
         for (const e of enemies) {
           if (!e.dead && world.roomAt(e.x, e.z) === roomId) e.alert();
@@ -438,11 +454,20 @@ function boot() {
     const s = Math.floor(gameTime % 60);
     const total = (LEVEL.documents || []).length;
     const rank = computeRank(gameTime, docsRead.size, total, difficulty);
+    $('chapend-title').textContent = `${LEVEL.name.split('：')[0]}　完`;
     $('chapend-rank').textContent = rank;
     $('chapend-stats').textContent =
       `存活時間 ${m} 分 ${String(s).padStart(2, '0')} 秒．文件 ${docsRead.size}/${total}．難度 ${DIFFICULTY[difficulty].name}`;
+    const hasNext = LEVEL.next && CHAPTERS[LEVEL.next];
+    $('btn-nextchap').style.display = hasNext ? '' : 'none';
     $('chapend').style.display = 'flex';
     audio.setMusicIntensity(0);
+  }
+
+  function gotoNextChapter() {
+    saves.remove(SAVE_KEY); // 新章節重新開始（進度另存）
+    saves.save(PROGRESS_KEY, { chapter: LEVEL.next, difficulty, auto: 'story' });
+    window.location.reload();
   }
 
   function nearestTypewriter() {
@@ -738,7 +763,7 @@ function boot() {
       return;
     }
     if (mode === 'story') {
-      const page = STORY1.pages[storyPage] || '';
+      const page = STORY.pages[storyPage] || '';
       if (storyChars < page.length) storyChars = Math.min(page.length, storyChars + dt * 42);
       $('story-text').textContent = page.slice(0, Math.floor(storyChars));
       const a = input.actions();
@@ -942,10 +967,11 @@ function boot() {
         setMode('typewriter');
       } else if (door) {
         if (door.lock === 'chapterExit') {
-          if (inventory.keyItems.includes('gatecode')) chapterEnd();
+          const need = LEVEL.exitNeeds;
+          if (!need || inventory.keyItems.includes(need)) chapterEnd();
           else {
             audio.play('locked');
-            hintFlash('電子鎖斷電，需要備援密碼——會議室裡也許有線索', 3.5);
+            hintFlash(LEVEL.exitHint || `需要「${world.lockNames[need] ?? need}」才能離開`, 3.5);
           }
         } else if (door.lock && inventory.keyItems.includes(door.lock)) {
           world.doors.get(door.id).lock = null;
@@ -1020,7 +1046,18 @@ function boot() {
   updateActiveRooms(true);
   loop.start();
   $('loading').style.display = 'none';
-  setMode('title'); // 開機進標題畫面（世界在背後作為活動背景）
+  // 章末銜接：直接播下一章開場劇情；否則進標題
+  if (progress.auto === 'story') {
+    if (progress.difficulty && DIFFICULTY[progress.difficulty]) {
+      difficulty = progress.difficulty;
+      applyDifficultyHp();
+    }
+    saves.save(PROGRESS_KEY, { chapter: LEVEL.id, difficulty });
+    audio.unlock(); // 前一頁的點擊手勢多半已失效，但嘗試無害
+    startStory();
+  } else {
+    setMode('title');
+  }
 
   // 供自動驗證與除錯
   window.__zw = {
