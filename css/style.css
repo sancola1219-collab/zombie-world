@@ -198,6 +198,54 @@ html, body {
   border-color: #8a7a55;
 }
 
+/* === 階段 3：選單與劇情 === */
+
+.menu-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 18px auto 0;
+  max-width: 420px;
+}
+
+.menu-col button {
+  pointer-events: auto;
+  font: inherit;
+  font-size: 17px;
+  letter-spacing: 3px;
+  color: #d8d4c8;
+  background: rgba(26, 28, 36, 0.9);
+  border: 1px solid #4a4438;
+  padding: 12px 24px;
+  cursor: pointer;
+}
+
+.menu-col button:hover {
+  background: #2a2c38;
+  border-color: #a3382e;
+  color: #f0e8d8;
+}
+
+.story-panel {
+  max-width: 620px;
+  text-align: left;
+}
+
+#story-title {
+  color: #a33;
+  letter-spacing: 6px;
+  margin-bottom: 18px;
+}
+
+#story-text {
+  min-height: 260px;
+  font-size: 17px;
+  line-height: 1.9;
+  letter-spacing: 1.5px;
+  white-space: pre-wrap;
+  color: #cfc8b8;
+}
+
 /* === 階段 3：小地圖 === */
 
 #minimap {

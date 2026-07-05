@@ -17,6 +17,7 @@ import { Dog } from './game/enemies/dog.js';
 import { separateEnemies } from './game/enemies/base.js';
 import { buildSave, applySave } from './game/gamestate.js';
 import { ARENA } from './levels/arena.js';
+import { STORY1 } from './levels/story1.js';
 import { HUD } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';
 
@@ -140,7 +141,9 @@ function boot() {
   }
 
   // === 狀態 ===
-  let mode = 'play'; // play | paused | inventory | typewriter | map | dead
+  let mode = 'title'; // title | difficulty | story | help | play | paused | inventory | typewriter | map | dead
+  let storyPage = 0;
+  let storyChars = 0; // 逐字顯示進度（邏輯時步驅動，非牆鐘）
   let gameTime = 0;
   let stepDistance = 0;
   let activeRoom = null;
@@ -172,6 +175,10 @@ function boot() {
 
   function setMode(m) {
     mode = m;
+    $('title').style.display = m === 'title' ? 'flex' : 'none';
+    $('difficulty').style.display = m === 'difficulty' ? 'flex' : 'none';
+    $('story').style.display = m === 'story' ? 'flex' : 'none';
+    $('help').style.display = m === 'help' ? 'flex' : 'none';
     $('pause').style.display = m === 'paused' ? 'flex' : 'none';
     if (m === 'paused') {
       $('pause-tip').textContent = isTouchOnly
@@ -180,6 +187,57 @@ function boot() {
           '．WASD 移動．Shift 奔跑．E 互動．Esc 暫停';
     }
   }
+
+  // === 標題/難度/劇情選單接線 ===
+  function startStory() {
+    storyPage = 0;
+    storyChars = 0;
+    $('story-title').textContent = STORY1.title;
+    $('story-text').textContent = '';
+    setMode('story');
+  }
+
+  function advanceStory() {
+    const page = STORY1.pages[storyPage];
+    if (storyChars < page.length) {
+      storyChars = page.length; // 第一下：整頁顯示
+      return;
+    }
+    storyPage += 1;
+    storyChars = 0;
+    if (storyPage >= STORY1.pages.length) beginPlay();
+  }
+
+  function beginPlay() {
+    setMode('play');
+    hintFlash('停電了。離開辦公區，找到武器——活下去', 4.5);
+    if (!input.dragMode && canvas.requestPointerLock) {
+      const p = canvas.requestPointerLock();
+      if (p && p.catch) p.catch(() => {});
+    }
+  }
+
+  $('btn-start').addEventListener('click', () => {
+    audio.unlock();
+    setMode('difficulty');
+  });
+  $('btn-continue').addEventListener('click', () => {
+    audio.unlock();
+    if (doLoad()) beginPlay();
+    else $('title-tip').textContent = '沒有存檔紀錄';
+  });
+  $('btn-help').addEventListener('click', () => setMode('help'));
+  $('btn-help-back').addEventListener('click', () => setMode('title'));
+  for (const b of document.querySelectorAll('.btn-diff')) {
+    b.addEventListener('click', () => {
+      difficulty = b.dataset.diff;
+      applyDifficultyHp();
+      startStory();
+    });
+  }
+  $('story').addEventListener('click', () => {
+    if (mode === 'story') advanceStory();
+  });
 
   $('resume').addEventListener('click', () => {
     setMode('play');
@@ -516,6 +574,20 @@ function boot() {
   // === 主更新 ===
 
   function update(dt) {
+    if (mode === 'title' || mode === 'difficulty' || mode === 'help') {
+      input.actions(); // 消化輸入緩衝
+      input.consumePressed('Escape');
+      return;
+    }
+    if (mode === 'story') {
+      const page = STORY1.pages[storyPage] || '';
+      if (storyChars < page.length) storyChars = Math.min(page.length, storyChars + dt * 42);
+      $('story-text').textContent = page.slice(0, Math.floor(storyChars));
+      const a = input.actions();
+      if (a.interact || a.fire) advanceStory();
+      if (input.consumePressed('Escape')) beginPlay(); // 跳過劇情
+      return;
+    }
     if (mode === 'paused') {
       input.actions();
       input.consumePressed('Escape');
@@ -752,6 +824,7 @@ function boot() {
   updateActiveRooms(true);
   loop.start();
   $('loading').style.display = 'none';
+  setMode('title'); // 開機進標題畫面（世界在背後作為活動背景）
 
   // 供自動驗證與除錯
   window.__zw = {
