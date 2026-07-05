@@ -314,6 +314,35 @@ export function buildDogMesh() {
   return g;
 }
 
+// === 倖存者 NPC（白袍研究員，站姿，無傷） ===
+
+export function buildSurvivorMesh() {
+  const g = new THREE.Group();
+  const skin = mat(0xd8b89a);
+  const coat = mat(0xd8d8d4);
+  const coatShade = mat(0xc2c2bc);
+  const pants = mat(0x3a3e48);
+  const hair = mat(0x2a2018);
+
+  cap(g, pants, 0.06, 0.3, -0.1, 0.55, 0);                    // 雙腿
+  cap(g, pants, 0.06, 0.3, 0.1, 0.55, 0);
+  blob(g, mat(0x1c1e24), 0.05, 1.1, 0.5, 2, -0.1, 0.06, -0.03); // 鞋
+  blob(g, mat(0x1c1e24), 0.05, 1.1, 0.5, 2, 0.1, 0.06, -0.03);
+  blob(g, coat, 0.12, 1.5, 1.9, 1.05, 0, 1.05, 0);             // 白袍軀幹
+  box(g, coatShade, 0.03, 0.42, 0.13, 0, 1.05, -0.115);        // 袍前襟
+  cap(g, coat, 0.042, 0.2, -0.23, 1.12, 0, 0, 0, 0.15);        // 雙臂（垂放）
+  cap(g, coat, 0.042, 0.2, 0.23, 1.12, 0, 0, 0, -0.15);
+  blob(g, skin, 0.032, 1, 1.1, 1, -0.26, 0.88, 0);             // 手
+  blob(g, skin, 0.032, 1, 1.1, 1, 0.26, 0.88, 0);
+  cyl(g, skin, 0.045, 0.05, 0.07, 8, 0, 1.42, 0);              // 頸
+  blob(g, skin, 0.095, 1, 1.12, 1, 0, 1.56, 0);                // 頭
+  blob(g, hair, 0.095, 1.02, 0.85, 1.02, 0, 1.62, 0.015);      // 長髮
+  blob(g, hair, 0.06, 1, 2.2, 0.5, 0, 1.35, 0.09);             // 馬尾
+  blob(g, mat(0x201812), 0.016, 1.2, 1, 0.5, -0.035, 1.58, -0.088); // 眼
+  blob(g, mat(0x201812), 0.016, 1.2, 1, 0.5, 0.035, 1.58, -0.088);
+  return g;
+}
+
 // === 打字機（含桌） ===
 
 export function buildTypewriterMesh() {

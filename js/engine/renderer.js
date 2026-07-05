@@ -9,6 +9,7 @@ import {
   buildDogMesh,
   buildTypewriterMesh,
   buildPickupMesh,
+  buildSurvivorMesh,
 } from './meshes.js';
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
@@ -426,6 +427,13 @@ export class Renderer {
       this.scene.remove(m);
       this.pickupMeshes.delete(id);
     }
+  }
+
+  addNpc(x, z, yaw = 0) {
+    const g = buildSurvivorMesh();
+    g.position.set(x, 0, z);
+    g.rotation.y = yaw;
+    this.scene.add(g);
   }
 
   addTypewriter(x, z) {

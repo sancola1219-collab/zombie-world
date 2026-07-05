@@ -16,7 +16,7 @@ import { Zombie } from './game/enemies/zombie.js';
 import { Dog } from './game/enemies/dog.js';
 import { separateEnemies } from './game/enemies/base.js';
 import { buildSave, applySave } from './game/gamestate.js';
-import { ARENA } from './levels/arena.js';
+import { CHAPTER1 } from './levels/chapter1.js';
 import { STORY1 } from './levels/story1.js';
 import { HUD } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';
@@ -29,7 +29,7 @@ const DIFFICULTY = {
   standard: { name: '標準', dmg: 1.0, hp: 1.0, ammo: 1.0 },
   hard: { name: '艱難', dmg: 1.4, hp: 1.2, ammo: 0.7 },
 };
-const LEVEL = ARENA;
+const LEVEL = CHAPTER1;
 
 function boot() {
   const container = $('app');
@@ -82,6 +82,7 @@ function boot() {
     renderer.placePickup(p.id, p.x, p.z);
   }
   for (const t of LEVEL.entities.typewriters) renderer.addTypewriter(t.x, t.z);
+  for (const n of LEVEL.npcs || []) renderer.addNpc(n.x, n.z, n.yaw || 0);
   renderer.setWeaponView(arsenal.current);
   // 外部 .glb 模型（assets/models/ 有檔才替換；非同步，不擋啟動）
   loadExternalModels().then((m) => {
@@ -152,6 +153,10 @@ function boot() {
   let everLocked = false;
   let hintOverride = null; // {text, t}
   let difficulty = 'standard';
+  const npcTalked = new Set(); // 已完成首次對話的 NPC
+  const firedTriggers = new Set(); // 已觸發的房間事件
+  let dialogNpc = null;
+  let dialogPage = 0;
   const projectiles = new Projectiles();
   const burning = new Map(); // enemy → {left, next}（火焰 DoT）
   const visited = new Set(); // 已探索房間（小地圖）
@@ -210,7 +215,7 @@ function boot() {
 
   function beginPlay() {
     setMode('play');
-    hintFlash('停電了。離開辦公區，找到武器——活下去', 4.5);
+    hintFlash(LEVEL.objective || '活下去', 4.5);
     if (!input.dragMode && canvas.requestPointerLock) {
       const p = canvas.requestPointerLock();
       if (p && p.catch) p.catch(() => {});
@@ -238,6 +243,10 @@ function boot() {
   $('story').addEventListener('click', () => {
     if (mode === 'story') advanceStory();
   });
+  $('dialog').addEventListener('click', () => {
+    if (mode === 'dialog') advanceDialog();
+  });
+  $('btn-chapend').addEventListener('click', () => window.location.reload());
 
   $('resume').addEventListener('click', () => {
     setMode('play');
@@ -274,6 +283,18 @@ function boot() {
     if (roomId === null || (roomId === activeRoom && !force)) return;
     activeRoom = roomId;
     visited.add(roomId);
+    // 房間事件觸發器（一次性）：提示、音效、驚醒房內敵人
+    for (const trg of LEVEL.triggers || []) {
+      if (trg.room !== roomId || firedTriggers.has(trg.id)) continue;
+      firedTriggers.add(trg.id);
+      hintFlash(trg.text, 3.6);
+      if (trg.sound) audio.play(trg.sound);
+      if (trg.alert) {
+        for (const e of enemies) {
+          if (!e.dead && world.roomAt(e.x, e.z) === roomId) e.alert();
+        }
+      }
+    }
     activeRoomIds = [roomId];
     for (const d of world.doorsOfRoom(roomId)) {
       const other = d.from === roomId ? d.to : d.from;
@@ -314,6 +335,56 @@ function boot() {
       }
     }
     return best;
+  }
+
+  function nearestNpc() {
+    for (const n of LEVEL.npcs || []) {
+      if (Math.hypot(n.x - player.x, n.z - player.z) < 1.5) return n;
+    }
+    return null;
+  }
+
+  function openDialog(npc) {
+    dialogNpc = npc;
+    dialogPage = 0;
+    $('dialog-name').textContent = npc.name;
+    $('dialog-text').textContent = npcTalked.has(npc.id) ? npc.dialogAfter : npc.dialog[0];
+    $('dialog').style.display = 'block';
+    setMode('dialog');
+  }
+
+  function advanceDialog() {
+    if (npcTalked.has(dialogNpc.id)) return closeDialog();
+    dialogPage += 1;
+    if (dialogPage < dialogNpc.dialog.length) {
+      $('dialog-text').textContent = dialogNpc.dialog[dialogPage];
+      return;
+    }
+    // 首次對話結束：贈禮
+    npcTalked.add(dialogNpc.id);
+    for (const g of dialogNpc.gift || []) {
+      inventory.add(g.item, g.count);
+      hintFlash(`取得 ${ITEMS[g.item].name}${g.count > 1 ? ' ×' + g.count : ''}`, 2.2);
+    }
+    audio.play('pickup');
+    hud.setAmmo(arsenal, inventory);
+    closeDialog();
+  }
+
+  function closeDialog() {
+    $('dialog').style.display = 'none';
+    dialogNpc = null;
+    setMode('play');
+  }
+
+  function chapterEnd() {
+    setMode('end');
+    const m = Math.floor(gameTime / 60);
+    const s = Math.floor(gameTime % 60);
+    $('chapend-stats').textContent =
+      `存活時間 ${m} 分 ${String(s).padStart(2, '0')} 秒．難度 ${DIFFICULTY[difficulty].name}`;
+    $('chapend').style.display = 'flex';
+    audio.setMusicIntensity(0);
   }
 
   function nearestTypewriter() {
@@ -491,6 +562,8 @@ function boot() {
       arsenal.give(def.weapon, def.rounds || 0);
       arsenal.select(def.weapon);
       renderer.setWeaponView(def.weapon);
+    } else if (def.type === 'key') {
+      inventory.keyItems.push(p.def.item); // 關鍵道具不佔格
     } else {
       // 難度影響彈藥拾取量
       const def0 = ITEMS[p.def.item];
@@ -586,6 +659,17 @@ function boot() {
       const a = input.actions();
       if (a.interact || a.fire) advanceStory();
       if (input.consumePressed('Escape')) beginPlay(); // 跳過劇情
+      return;
+    }
+    if (mode === 'dialog') {
+      const a = input.actions();
+      if (a.interact || a.fire) advanceDialog();
+      if (input.consumePressed('Escape')) closeDialog();
+      return;
+    }
+    if (mode === 'end') {
+      input.actions();
+      input.consumePressed('Escape');
       return;
     }
     if (mode === 'paused') {
@@ -752,19 +836,28 @@ function boot() {
       audio.setMusicIntensity(inCombat ? 1 : 0);
     }
 
-    // 互動優先序：拾取 > 打字機 > 門
-    const pickup = nearestPickup();
-    const typewriter = pickup ? null : nearestTypewriter();
-    const door = pickup || typewriter ? null : nearestDoor();
+    // 互動優先序：NPC > 拾取 > 打字機 > 門
+    const npc = nearestNpc();
+    const pickup = npc ? null : nearestPickup();
+    const typewriter = npc || pickup ? null : nearestTypewriter();
+    const door = npc || pickup || typewriter ? null : nearestDoor();
 
     if (actions.interact) {
-      if (pickup) tryPickup(pickup);
+      if (npc) openDialog(npc);
+      else if (pickup) tryPickup(pickup);
       else if (typewriter) {
         overlays.openTypewriter(saves.load(SAVE_KEY) !== null);
         setMode('typewriter');
       } else if (door) {
-        if (door.lock) audio.play('locked');
-        else {
+        if (door.lock === 'chapterExit') {
+          chapterEnd();
+        } else if (door.lock && inventory.keyItems.includes(door.lock)) {
+          world.doors.get(door.id).lock = null;
+          audio.play('reload');
+          hintFlash(`使用了「${world.lockNames[door.lock] ?? door.lock}」`, 2.2);
+        } else if (door.lock) {
+          audio.play('locked');
+        } else {
           const next = !door.open;
           world.setDoorOpen(door.id, next);
           renderer.setDoorOpen(door.id, next);
@@ -778,12 +871,17 @@ function boot() {
       hintOverride.t -= dt;
       hint(hintOverride.text);
       if (hintOverride.t <= 0) hintOverride = null;
+    } else if (npc) {
+      hint(`按 E 與${npc.name}交談`);
     } else if (pickup) {
       hint(`按 E 拾取 ${ITEMS[pickup.def.item].name}`);
     } else if (typewriter) {
       hint('按 E 使用打字機');
     } else if (door) {
-      hint(door.lock ? `上鎖了——需要「${world.lockNames[door.lock] ?? door.lock}」` : door.open ? '按 E 關門' : '按 E 開門');
+      if (door.lock === 'chapterExit') hint('按 E 離開廠區');
+      else if (door.lock && inventory.keyItems.includes(door.lock)) hint(`按 E 使用「${world.lockNames[door.lock] ?? door.lock}」`);
+      else if (door.lock) hint(`上鎖了——需要「${world.lockNames[door.lock] ?? door.lock}」`);
+      else hint(door.open ? '按 E 關門' : '按 E 開門');
     } else {
       hint(idleHint());
     }
