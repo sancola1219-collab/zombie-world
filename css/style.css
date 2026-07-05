@@ -51,6 +51,100 @@ html, body {
   white-space: nowrap;
 }
 
+#ammo {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: #d8d4c8;
+  text-shadow: 0 1px 4px #000;
+}
+
+#ecg {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+  background: rgba(5, 8, 6, 0.55);
+}
+
+#hitmarker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 15px;
+  color: #f2f0e8;
+  text-shadow: 0 0 4px #000;
+  opacity: 0;
+}
+
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(120, 0, 0, 0) 42%, rgba(150, 8, 8, 0.75) 100%);
+}
+
+.inv-panel {
+  min-width: 460px;
+}
+
+#inv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 18px 0 10px;
+}
+
+.inv-cell {
+  height: 68px;
+  border: 1px solid #4a4438;
+  background: rgba(20, 22, 30, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.inv-cell.sel {
+  border-color: #c9a94f;
+  box-shadow: 0 0 8px rgba(201, 169, 79, 0.4) inset;
+}
+
+.inv-cell.marked {
+  border-color: #57d06a;
+}
+
+.inv-count {
+  color: #9a957f;
+  font-size: 12px;
+}
+
+#inv-desc {
+  min-height: 22px;
+  font-size: 13px;
+  color: #9a957f;
+  letter-spacing: 1px;
+}
+
+.panel h2 {
+  font-size: 26px;
+  letter-spacing: 8px;
+  color: #c9b98f;
+  margin-bottom: 10px;
+}
+
+.death-title {
+  color: #8a1010 !important;
+  font-size: 56px !important;
+}
+
 .overlay {
   position: fixed;
   inset: 0;

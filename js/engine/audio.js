@@ -1,10 +1,12 @@
 // WebAudio 合成音效：零外部音檔。AudioContext 需使用者手勢後建立（unlock）。
-// ctx 尚未建立時所有播放都安靜跳過。
+// ctx 尚未建立時所有播放都安靜跳過。心跳由 tier 驅動（fine 無、caution 慢、danger 快）。
 export class AudioEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
     this._noise = null;
+    this._hbTier = 'fine';
+    this._hbTimer = 0;
   }
 
   unlock() {
@@ -16,15 +18,50 @@ export class AudioEngine {
       this.master.gain.value = 0.5;
       this.master.connect(this.ctx.destination);
       this._startAmbient();
+      this._hbInterval = setInterval(() => this._heartbeatPump(), 120);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
   }
 
   play(name) {
     if (!this.ctx) return;
-    if (name === 'step') this._step();
-    else if (name === 'door') this._door();
-    else if (name === 'locked') this._locked();
+    const fn = this['_' + name];
+    if (fn) fn.call(this);
+  }
+
+  gunshot(weapon) {
+    if (!this.ctx) return;
+    if (weapon === 'shotgun') this._shotgunShot();
+    else if (weapon === 'magnum') this._bigShot();
+    else this._handgunShot();
+  }
+
+  setHeartbeat(tier) {
+    this._hbTier = tier;
+  }
+
+  _heartbeatPump() {
+    if (!this.ctx || this._hbTier === 'fine') return;
+    const period = this._hbTier === 'danger' ? 0.62 : 1.05;
+    const now = this.ctx.currentTime;
+    if (this._hbTimer > now - 0.01) return;
+    this._hbTimer = now + period;
+    this._thump(now, 0.5);
+    this._thump(now + 0.16, 0.32);
+  }
+
+  _thump(t, vol) {
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(58, t);
+    osc.frequency.exponentialRampToValueAtTime(38, t + 0.12);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    osc.connect(g);
+    g.connect(this.master);
+    osc.start(t);
+    osc.stop(t + 0.2);
   }
 
   _noiseBuffer() {
@@ -37,70 +74,135 @@ export class AudioEngine {
     return buf;
   }
 
-  // 短促低頻噪音：腳步
-  _step() {
-    const t = this.ctx.currentTime;
+  // 噪音脈衝工具：filterType/freq、增益、時長
+  _burst({ type = 'lowpass', freq = 400, vol = 0.3, dur = 0.12, when = 0 }) {
+    const t = this.ctx.currentTime + when;
     const src = this.ctx.createBufferSource();
     src.buffer = this._noiseBuffer();
     const f = this.ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.value = 320;
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.35, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    f.type = type;
+    f.frequency.value = freq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     src.connect(f);
-    f.connect(gain);
-    gain.connect(this.master);
-    src.start(t, Math.random() * 0.6, 0.13);
+    f.connect(g);
+    g.connect(this.master);
+    src.start(t, Math.random() * 0.6, dur + 0.05);
   }
 
-  // 低頻悶響＋吱呀掃頻：開關門
-  _door() {
-    const t = this.ctx.currentTime;
+  _tone({ type = 'sine', from = 440, to = null, vol = 0.1, dur = 0.15, when = 0 }) {
+    const t = this.ctx.currentTime + when;
     const osc = this.ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.exponentialRampToValueAtTime(70, t + 0.5);
-    const og = this.ctx.createGain();
-    og.gain.setValueAtTime(0.06, t);
-    og.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-    osc.connect(og);
-    og.connect(this.master);
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, t);
+    if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g);
+    g.connect(this.master);
     osc.start(t);
-    osc.stop(t + 0.6);
-
-    const thud = this.ctx.createBufferSource();
-    thud.buffer = this._noiseBuffer();
-    const tf = this.ctx.createBiquadFilter();
-    tf.type = 'lowpass';
-    tf.frequency.value = 140;
-    const tg = this.ctx.createGain();
-    tg.gain.setValueAtTime(0.5, t);
-    tg.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-    thud.connect(tf);
-    tf.connect(tg);
-    tg.connect(this.master);
-    thud.start(t, Math.random() * 0.5, 0.3);
+    osc.stop(t + dur + 0.05);
   }
 
-  // 金屬雙 click：上鎖的門
+  _step() {
+    this._burst({ freq: 320, vol: 0.32, dur: 0.11 });
+  }
+
+  _door() {
+    this._tone({ type: 'sawtooth', from: 180, to: 70, vol: 0.06, dur: 0.5 });
+    this._burst({ freq: 140, vol: 0.5, dur: 0.28 });
+  }
+
   _locked() {
+    this._tone({ type: 'square', from: 900, vol: 0.08, dur: 0.05 });
+    this._tone({ type: 'square', from: 1400, vol: 0.08, dur: 0.05, when: 0.13 });
+  }
+
+  _handgunShot() {
+    this._burst({ type: 'highpass', freq: 900, vol: 0.55, dur: 0.07 });
+    this._burst({ freq: 220, vol: 0.6, dur: 0.12 });
+  }
+
+  _shotgunShot() {
+    this._burst({ type: 'highpass', freq: 600, vol: 0.6, dur: 0.1 });
+    this._burst({ freq: 130, vol: 0.9, dur: 0.28 });
+    this._tone({ type: 'sine', from: 70, to: 40, vol: 0.3, dur: 0.25 });
+  }
+
+  _bigShot() {
+    this._burst({ type: 'highpass', freq: 700, vol: 0.6, dur: 0.09 });
+    this._burst({ freq: 160, vol: 0.85, dur: 0.2 });
+  }
+
+  _dry() {
+    this._tone({ type: 'square', from: 1100, vol: 0.06, dur: 0.035 });
+  }
+
+  _reload() {
+    this._tone({ type: 'square', from: 700, vol: 0.07, dur: 0.04 });
+    this._burst({ freq: 800, type: 'bandpass', vol: 0.2, dur: 0.06, when: 0.12 });
+    this._tone({ type: 'square', from: 500, vol: 0.08, dur: 0.05, when: 0.24 });
+  }
+
+  _knife() {
+    this._burst({ type: 'bandpass', freq: 2400, vol: 0.15, dur: 0.08 });
+  }
+
+  _groan() {
     const t = this.ctx.currentTime;
-    for (const dt of [0, 0.13]) {
+    for (const detune of [0, 7]) {
       const osc = this.ctx.createOscillator();
-      osc.type = 'square';
-      osc.frequency.value = 900 + dt * 800;
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(85 + detune, t);
+      osc.frequency.linearRampToValueAtTime(65 + detune, t + 0.9);
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 320;
       const g = this.ctx.createGain();
-      g.gain.setValueAtTime(0.08, t + dt);
-      g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.05);
-      osc.connect(g);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.07, t + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+      osc.connect(f);
+      f.connect(g);
       g.connect(this.master);
-      osc.start(t + dt);
-      osc.stop(t + dt + 0.06);
+      osc.start(t);
+      osc.stop(t + 1.1);
     }
   }
 
-  // 低沉環境音：棕噪音＋緩慢起伏
+  _dogbark() {
+    this._tone({ type: 'square', from: 320, to: 150, vol: 0.12, dur: 0.09 });
+    this._burst({ type: 'bandpass', freq: 900, vol: 0.25, dur: 0.08 });
+  }
+
+  _bite() {
+    this._burst({ type: 'bandpass', freq: 500, vol: 0.5, dur: 0.1 });
+    this._burst({ freq: 200, vol: 0.4, dur: 0.14, when: 0.05 });
+  }
+
+  _hurt() {
+    this._tone({ type: 'sine', from: 220, to: 90, vol: 0.2, dur: 0.18 });
+    this._burst({ freq: 300, vol: 0.3, dur: 0.1 });
+  }
+
+  _pickup() {
+    this._tone({ type: 'triangle', from: 520, vol: 0.08, dur: 0.07 });
+    this._tone({ type: 'triangle', from: 780, vol: 0.08, dur: 0.09, when: 0.08 });
+  }
+
+  _heal() {
+    this._tone({ type: 'sine', from: 400, to: 800, vol: 0.08, dur: 0.4 });
+  }
+
+  _typewriter() {
+    for (let i = 0; i < 3; i++) {
+      this._tone({ type: 'square', from: 1600 + i * 120, vol: 0.05, dur: 0.03, when: i * 0.09 });
+    }
+    this._tone({ type: 'triangle', from: 1180, vol: 0.09, dur: 0.5, when: 0.34 });
+  }
+
   _startAmbient() {
     const src = this.ctx.createBufferSource();
     const len = this.ctx.sampleRate * 4;

@@ -1,14 +1,27 @@
-// 進入點：組裝引擎與遊戲，沙盒關卡。
+// 進入點：組裝引擎與遊戲。階段二：戰鬥示範場。
 import { GameLoop } from './engine/loop.js';
 import { Renderer } from './engine/renderer.js';
 import { Input } from './engine/input.js';
 import { AudioEngine } from './engine/audio.js';
 import { SaveStore } from './engine/save.js';
+import { mulberry32 } from './engine/rng.js';
 import { World } from './game/world.js';
 import { Player } from './game/player.js';
-import { SANDBOX } from './levels/sandbox.js';
+import { Inventory, ITEMS } from './game/items.js';
+import { Arsenal } from './game/weapons.js';
+import { castShot, jitterDir } from './game/combat.js';
+import { Zombie } from './game/enemies/zombie.js';
+import { Dog } from './game/enemies/dog.js';
+import { separateEnemies } from './game/enemies/base.js';
+import { buildSave, applySave } from './game/gamestate.js';
+import { ARENA } from './levels/arena.js';
+import { HUD } from './ui/hud.js';
+import { Overlays } from './ui/overlays.js';
 
 const $ = (id) => document.getElementById(id);
+const SAVE_KEY = 'zombie-world-save';
+const WEAPON_SLOTS = ['knife', 'handgun', 'shotgun', 'magnum'];
+const LEVEL = ARENA;
 
 function boot() {
   const container = $('app');
@@ -22,10 +35,12 @@ function boot() {
     return;
   }
 
-  const world = new World(SANDBOX);
-  const player = new Player(SANDBOX.spawn);
+  const world = new World(LEVEL);
+  const player = new Player(LEVEL.spawn);
   const input = new Input();
   const audio = new AudioEngine();
+  const hud = new HUD();
+  const overlays = new Overlays();
   let saves;
   try {
     saves = new SaveStore(window.localStorage);
@@ -33,16 +48,43 @@ function boot() {
     saves = new SaveStore(null);
   }
 
+  let inventory = new Inventory();
+  let arsenal = new Arsenal();
+  for (const w of LEVEL.start.weapons) arsenal.give(w.id, w.rounds);
+  if (LEVEL.start.weapons.length) arsenal.select(LEVEL.start.weapons[0].id);
+
+  // === 實體 ===
+  const pickups = new Map(); // id → {item, count, x, z}
+  let takenPickups = new Set();
+  const enemies = LEVEL.entities.enemies.map((d) =>
+    d.type === 'dog' ? new Dog({ id: d.id, x: d.x, z: d.z }) : new Zombie({ id: d.id, x: d.x, z: d.z })
+  );
+
   renderer.buildLevel(world);
+  for (const e of enemies) renderer.addEnemy(e.id, e.type);
+  for (const p of LEVEL.entities.pickups) {
+    pickups.set(p.id, { item: p.item, count: p.count, x: p.x, z: p.z });
+    renderer.addPickup(p.id, ITEMS[p.item].type);
+    renderer.placePickup(p.id, p.x, p.z);
+  }
+  for (const t of LEVEL.entities.typewriters) renderer.addTypewriter(t.x, t.z);
+  renderer.setWeaponView(arsenal.current);
+
   const canvas = renderer.renderer.domElement;
   input.attach(canvas);
   canvas.addEventListener('click', () => audio.unlock());
 
-  let paused = false;
+  // === 狀態 ===
+  let mode = 'play'; // play | paused | inventory | typewriter | dead
+  let gameTime = 0;
   let stepDistance = 0;
   let activeRoom = null;
+  let activeRoomIds = [];
   let lastHint = null;
   let everLocked = false;
+  let hintOverride = null; // {text, t}
+  const rngFire = mulberry32(1234);
+  const rngAI = mulberry32(5678);
   const isTouchOnly = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
 
   function hint(text) {
@@ -51,59 +93,66 @@ function boot() {
     $('hint').textContent = text;
   }
 
-  function setPaused(p) {
-    paused = p;
-    if (p) {
+  function hintFlash(text, seconds = 1.4) {
+    hintOverride = { text, t: seconds };
+  }
+
+  function setMode(m) {
+    mode = m;
+    $('pause').style.display = m === 'paused' ? 'flex' : 'none';
+    if (m === 'paused') {
       $('pause-tip').textContent =
         (input.dragMode ? '按住滑鼠拖曳調整視角' : '點擊畫面鎖定視角') +
         '．WASD 移動．Shift 奔跑．E 互動．Esc 暫停';
     }
-    $('pause').style.display = p ? 'flex' : 'none';
   }
 
   $('resume').addEventListener('click', () => {
-    setPaused(false);
+    setMode('play');
     audio.unlock();
     if (!input.dragMode && canvas.requestPointerLock) {
-      // Esc 後約 1.25 秒內重新上鎖會被瀏覽器拒絕——吞掉拒絕，玩家點畫面即重試
       const p = canvas.requestPointerLock();
       if (p && p.catch) p.catch(() => {});
     }
   });
 
-  // 按 Esc 離開 PointerLock 時瀏覽器不會給頁面 keydown——用失鎖事件觸發暫停
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement === canvas) {
       everLocked = true;
-    } else if (!input.dragMode && !paused) {
-      setPaused(true);
+    } else if (!input.dragMode && mode === 'play') {
+      setMode('paused');
     }
   });
 
-  // 分頁隱藏時自動暫停（涵蓋拖曳模式；單機恐怖遊戲不該在看不到畫面時繼續推進）
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !paused) setPaused(true);
+    if (document.hidden && mode === 'play') setMode('paused');
   });
 
-  function updateActiveRooms() {
-    const roomId = world.roomAt(player.x, player.z) ?? activeRoom;
-    if (roomId === null || roomId === activeRoom) return;
-    activeRoom = roomId;
-    const visible = [roomId];
-    for (const d of world.doorsOfRoom(roomId)) {
-      const other = d.from === roomId ? d.to : d.from;
-      if (other) visible.push(other);
-    }
-    renderer.setActiveRooms(visible);
-  }
-
-  // 尚未上手前的引導文字（取得過 pointer lock 後就不再顯示）
   function idleHint() {
     if (everLocked) return '';
     if (isTouchOnly) return '目前版本需鍵盤滑鼠操作，觸控支援將於後續版本推出';
     if (input.dragMode) return '按住滑鼠拖曳調整視角．WASD 移動．E 互動';
     return '點擊畫面鎖定視角．WASD 移動．E 互動';
   }
+
+  // === 房間可視性 ===
+
+  function updateActiveRooms(force = false) {
+    const roomId = world.roomAt(player.x, player.z) ?? activeRoom;
+    if (roomId === null || (roomId === activeRoom && !force)) return;
+    activeRoom = roomId;
+    activeRoomIds = [roomId];
+    for (const d of world.doorsOfRoom(roomId)) {
+      const other = d.from === roomId ? d.to : d.from;
+      if (other) activeRoomIds.push(other);
+    }
+    renderer.setActiveRooms(activeRoomIds);
+    for (const [id, p] of pickups) {
+      renderer.setPickupVisible(id, !takenPickups.has(id) && activeRoomIds.includes(world.roomAt(p.x, p.z)));
+    }
+  }
+
+  // === 互動目標 ===
 
   function nearestDoor() {
     const roomId = world.roomAt(player.x, player.z);
@@ -120,15 +169,257 @@ function boot() {
     return best;
   }
 
-  function update(dt) {
-    if (paused) {
-      input.actions(); // 暫停時仍消化輸入緩衝，避免恢復瞬間視角暴衝
-      input.consumePressed('Escape'); // 丟棄暫停中按的 Esc，避免恢復後下一 tick 立刻重新暫停
+  function nearestPickup() {
+    let best = null;
+    let bestDist = 1.1;
+    for (const [id, p] of pickups) {
+      if (takenPickups.has(id)) continue;
+      const dist = Math.hypot(p.x - player.x, p.z - player.z);
+      if (dist < bestDist) {
+        best = { id, def: p };
+        bestDist = dist;
+      }
+    }
+    return best;
+  }
+
+  function nearestTypewriter() {
+    for (const t of LEVEL.entities.typewriters) {
+      if (Math.hypot(t.x - player.x, t.z - player.z) < 1.25) return t;
+    }
+    return null;
+  }
+
+  // === 戰鬥 ===
+
+  function camDir() {
+    const cp = Math.cos(player.pitch);
+    return { x: -Math.sin(player.yaw) * cp, y: Math.sin(player.pitch), z: -Math.cos(player.yaw) * cp };
+  }
+
+  function shotWallSegments() {
+    const roomId = world.roomAt(player.x, player.z);
+    if (!roomId) return [];
+    let segs = world.collisionSegments(roomId);
+    for (const d of world.doorsOfRoom(roomId)) {
+      if (!d.open) continue;
+      const other = d.from === roomId ? d.to : d.from;
+      if (other) segs = segs.concat(world.collisionSegments(other));
+    }
+    return segs;
+  }
+
+  function alertNearbyEnemies() {
+    const roomId = world.roomAt(player.x, player.z);
+    if (!roomId) return;
+    const rooms = new Set([roomId]);
+    for (const d of world.doorsOfRoom(roomId)) {
+      const other = d.from === roomId ? d.to : d.from;
+      if (other) rooms.add(other);
+    }
+    for (const e of enemies) {
+      if (!e.dead && rooms.has(world.roomAt(e.x, e.z))) e.alert();
+    }
+  }
+
+  function tryFire() {
+    const shot = arsenal.fire(gameTime);
+    if (!shot) return;
+    if (shot.empty) {
+      audio.play('dry');
+      hintFlash('沒有子彈了——按 R 裝填');
       return;
     }
+    const origin = { x: player.x, y: player.eyeHeight, z: player.z };
+    const baseDir = camDir();
+    const segs = shotWallSegments();
+
+    if (shot.melee) {
+      audio.play('knife');
+      renderer.kickViewmodel(0.03);
+      const hit = castShot({ origin, dir: baseDir, enemies, wallSegments: segs, maxRange: shot.range });
+      if (hit) applyHit(hit, baseDir, shot.damage);
+      return;
+    }
+
+    audio.gunshot(shot.weapon);
+    renderer.muzzleFlash();
+    renderer.kickViewmodel(shot.weapon === 'shotgun' ? 0.1 : 0.06);
+    alertNearbyEnemies();
+    for (let i = 0; i < shot.pellets; i++) {
+      const dir = jitterDir(baseDir, shot.spread, rngFire);
+      const hit = castShot({ origin, dir, enemies, wallSegments: segs });
+      if (hit) applyHit(hit, dir, shot.damage);
+    }
+    hud.setAmmo(arsenal, inventory);
+  }
+
+  function applyHit(hit, dir, damage) {
+    hit.enemy.hurt(damage, hit.zone);
+    hud.hitmark();
+    renderer.bloodBurst(
+      player.x + dir.x * hit.dist,
+      player.eyeHeight + dir.y * hit.dist,
+      player.z + dir.z * hit.dist
+    );
+  }
+
+  const enemyCtx = {
+    player,
+    world,
+    rng: rngAI,
+    get gameTime() {
+      return gameTime;
+    },
+    attackPlayer(dmg) {
+      if (player.hurt(dmg)) {
+        hud.damageFlash();
+        audio.play('hurt');
+        if (player.hp <= 0) die();
+      }
+    },
+    sound(name) {
+      audio.play(name);
+    },
+  };
+
+  function die() {
+    setMode('dead');
+    overlays.showDeath(saves.load(SAVE_KEY) !== null);
+  }
+
+  // === 拾取 ===
+
+  function tryPickup(p) {
+    const def = ITEMS[p.def.item];
+    if (def.type === 'weapon') {
+      arsenal.give(def.weapon, def.rounds || 0);
+      arsenal.select(def.weapon);
+      renderer.setWeaponView(def.weapon);
+    } else {
+      const r = inventory.add(p.def.item, p.def.count);
+      if (r.leftover > 0) {
+        // 全有或全無：部分拾取會讓存檔狀態變複雜
+        inventory.takeAmmo(p.def.item, r.added); // 還原
+        hintFlash('物品欄已滿');
+        audio.play('locked');
+        return;
+      }
+    }
+    takenPickups.add(p.id);
+    renderer.removePickup(p.id);
+    audio.play('pickup');
+    hintFlash(`取得 ${def.name}${p.def.count > 1 ? ' ×' + p.def.count : ''}`);
+    hud.setAmmo(arsenal, inventory);
+  }
+
+  // === 存讀檔 ===
+
+  function doSave() {
+    const data = buildSave({
+      levelId: LEVEL.id,
+      player,
+      inventory,
+      arsenal,
+      enemies,
+      takenPickups,
+      gameTime,
+    });
+    saves.save(SAVE_KEY, data);
+    audio.play('typewriter');
+    $('tw-info').textContent = saves.persistent
+      ? '已存檔。'
+      : '已存檔（此瀏覽器無法永久保存，關閉頁面將遺失）。';
+  }
+
+  function doLoad() {
+    const data = saves.load(SAVE_KEY);
+    if (!data || data.levelId !== LEVEL.id) return false;
+    const restored = applySave(data, { player });
+    inventory = restored.inventory;
+    arsenal = restored.arsenal;
+    gameTime = restored.gameTime;
+    takenPickups = restored.takenPickups;
+    player.iframes = 0;
+    const byId = new Map(restored.enemySnapshots.map((s) => [s.id, s]));
+    for (const e of enemies) {
+      const s = byId.get(e.id);
+      if (!s) continue;
+      e.restore(s);
+      if (!e.dead) {
+        e.setState('idle');
+        e.alerted = false;
+      }
+      renderer.syncEnemy(e.id, e, true);
+    }
+    for (const [id, p] of pickups) {
+      if (takenPickups.has(id)) {
+        renderer.removePickup(id);
+      } else if (!renderer.pickupMeshes.has(id)) {
+        renderer.addPickup(id, ITEMS[p.item].type);
+        renderer.placePickup(id, p.x, p.z);
+      }
+    }
+    renderer.setWeaponView(arsenal.current);
+    hud.setAmmo(arsenal, inventory);
+    updateActiveRooms(true);
+    return true;
+  }
+
+  // === 主更新 ===
+
+  function update(dt) {
+    if (mode === 'paused') {
+      input.actions();
+      input.consumePressed('Escape');
+      return;
+    }
+    if (mode === 'inventory') {
+      input.consumeLook();
+      input.consumeMouseJust(0);
+      if (overlays.inventoryInput(input, inventory, player, audio)) {
+        overlays.closeInventory();
+        hud.setAmmo(arsenal, inventory);
+        setMode('play');
+      }
+      return;
+    }
+    if (mode === 'typewriter') {
+      input.consumeLook();
+      input.consumeMouseJust(0);
+      const act = overlays.typewriterInput(input);
+      if (act === 'save') doSave();
+      else if (act === 'load') {
+        if (doLoad()) {
+          overlays.closeTypewriter();
+          setMode('play');
+          hintFlash('讀取完成');
+        } else {
+          $('tw-info').textContent = '沒有可讀取的存檔。';
+        }
+      } else if (act === 'close') {
+        overlays.closeTypewriter();
+        setMode('play');
+      }
+      return;
+    }
+    if (mode === 'dead') {
+      input.consumeLook();
+      const act = overlays.deathInput(input);
+      if (act === 'load' && doLoad()) {
+        $('death').style.display = 'none';
+        setMode('play');
+      } else if (act === 'restart') {
+        window.location.reload();
+      }
+      return;
+    }
+
+    // === play ===
+    gameTime += dt;
     const actions = input.actions();
     if (input.consumePressed('Escape')) {
-      setPaused(true);
+      setMode('paused');
       return;
     }
 
@@ -143,24 +434,73 @@ function boot() {
       audio.play('step');
     }
 
-    const door = nearestDoor();
-    if (door) {
-      if (door.lock) {
-        hint(`上鎖了——需要「${world.lockNames[door.lock] ?? door.lock}」`);
-        if (actions.interact) audio.play('locked');
-      } else {
-        hint(door.open ? '按 E 關門' : '按 E 開門');
-        if (actions.interact) {
+    if (actions.weaponSlot !== null) {
+      const id = WEAPON_SLOTS[actions.weaponSlot];
+      if (id && arsenal.has(id)) {
+        arsenal.select(id);
+        renderer.setWeaponView(id);
+        hud.setAmmo(arsenal, inventory);
+      }
+    }
+    if (actions.reload) {
+      const got = arsenal.reload(inventory);
+      if (got > 0) {
+        audio.play('reload');
+        hud.setAmmo(arsenal, inventory);
+      }
+    }
+    if (actions.inventory) {
+      overlays.openInventory(inventory);
+      setMode('inventory');
+      return;
+    }
+    if (actions.fire) tryFire();
+
+    // 互動優先序：拾取 > 打字機 > 門
+    const pickup = nearestPickup();
+    const typewriter = pickup ? null : nearestTypewriter();
+    const door = pickup || typewriter ? null : nearestDoor();
+
+    if (actions.interact) {
+      if (pickup) tryPickup(pickup);
+      else if (typewriter) {
+        overlays.openTypewriter(saves.load(SAVE_KEY) !== null);
+        setMode('typewriter');
+      } else if (door) {
+        if (door.lock) audio.play('locked');
+        else {
           const next = !door.open;
           world.setDoorOpen(door.id, next);
           renderer.setDoorOpen(door.id, next);
           audio.play('door');
         }
       }
+    }
+
+    // 提示
+    if (hintOverride) {
+      hintOverride.t -= dt;
+      hint(hintOverride.text);
+      if (hintOverride.t <= 0) hintOverride = null;
+    } else if (pickup) {
+      hint(`按 E 拾取 ${ITEMS[pickup.def.item].name}`);
+    } else if (typewriter) {
+      hint('按 E 使用打字機');
+    } else if (door) {
+      hint(door.lock ? `上鎖了——需要「${world.lockNames[door.lock] ?? door.lock}」` : door.open ? '按 E 關門' : '按 E 開門');
     } else {
       hint(idleHint());
     }
 
+    // 敵人
+    for (const e of enemies) e.update(dt, enemyCtx);
+    separateEnemies(enemies);
+    for (const e of enemies) {
+      renderer.syncEnemy(e.id, e, activeRoomIds.includes(world.roomAt(e.x, e.z)));
+    }
+
+    audio.setHeartbeat(player.healthTier());
+    hud.update(dt, player);
     updateActiveRooms();
   }
 
@@ -171,19 +511,43 @@ function boot() {
 
   const loop = new GameLoop({ update, render });
 
-  // 尺寸：容器初始可能為 0（既有課題），ResizeObserver 持續跟隨
   const ro = new ResizeObserver(() => {
     renderer.resize(container.clientWidth, container.clientHeight);
   });
   ro.observe(container);
   renderer.resize(container.clientWidth || window.innerWidth, container.clientHeight || window.innerHeight);
 
-  updateActiveRooms();
+  hud.setAmmo(arsenal, inventory);
+  updateActiveRooms(true);
   loop.start();
   $('loading').style.display = 'none';
 
-  // 供自動驗證與除錯（發佈版也留著，無安全疑慮）
-  window.__zw = { world, player, input, loop, renderer, saves, setPaused, version: 'phase1' };
+  // 供自動驗證與除錯
+  window.__zw = {
+    world,
+    player,
+    input,
+    loop,
+    renderer,
+    saves,
+    enemies,
+    doSave,
+    doLoad,
+    setMode,
+    get mode() {
+      return mode;
+    },
+    get inventory() {
+      return inventory;
+    },
+    get arsenal() {
+      return arsenal;
+    },
+    get gameTime() {
+      return gameTime;
+    },
+    version: 'phase2',
+  };
 }
 
 boot();

@@ -17,7 +17,32 @@
 <div id="app"></div>
 <div id="hud">
   <div id="crosshair"></div>
+  <div id="hitmarker">✕</div>
   <div id="hint"></div>
+  <div id="ammo"></div>
+  <canvas id="ecg" width="200" height="64"></canvas>
+</div>
+<div id="vignette"></div>
+<div id="inv" class="overlay" style="display:none">
+  <div class="panel inv-panel">
+    <h2>物品欄</h2>
+    <div id="inv-grid"></div>
+    <div id="inv-desc"></div>
+    <p class="tip">WASD/方向鍵 移動．E 使用．F 選取＋組合．G 丟棄．Tab 關閉</p>
+  </div>
+</div>
+<div id="typewriter" class="overlay" style="display:none">
+  <div class="panel">
+    <h2>打字機</h2>
+    <p id="tw-info"></p>
+    <p class="tip">E 存檔．R 讀取．Tab 離開</p>
+  </div>
+</div>
+<div id="death" class="overlay" style="display:none">
+  <div class="panel">
+    <h1 class="death-title">你死了</h1>
+    <p class="tip" id="death-tip">R 讀取存檔．Enter 重新開始</p>
+  </div>
 </div>
 <div id="loading" class="overlay">
   <div class="panel">
