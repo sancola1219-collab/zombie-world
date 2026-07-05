@@ -10,13 +10,13 @@ export const SANDBOX = {
       id: 'hall',
       x: 0, z: 0, w: 8, d: 6, h: 3,
       floor: 'wood', walls: 'wallpaper',
-      light: { x: 4, y: 2.6, z: 3, color: 0xffd9a0, intensity: 7 },
+      light: { x: 4, y: 2.6, z: 3, color: 0xffd9a0, intensity: 38 },
     },
     {
       id: 'study',
       x: 8, z: 0, w: 5, d: 6, h: 3,
       floor: 'tile', walls: 'plaster',
-      light: { x: 10.5, y: 2.6, z: 3, color: 0x9fc4ff, intensity: 5 },
+      light: { x: 10.5, y: 2.6, z: 3, color: 0x9fc4ff, intensity: 28 },
     },
   ],
   doors: [

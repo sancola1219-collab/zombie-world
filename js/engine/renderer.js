@@ -12,26 +12,32 @@ export class Renderer {
     }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; // 電影感色調映射
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.2;
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x030408);
-    this.scene.fog = new THREE.FogExp2(0x04050a, 0.095);
+    this.scene.background = new THREE.Color(0x020306);
+    this.scene.fog = new THREE.FogExp2(0x03040a, 0.115);
 
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.05, 60);
     this.camera.rotation.order = 'YXZ';
     this.scene.add(this.camera); // 讓視角武器模型（相機子物件）可被渲染
 
-    this.scene.add(new THREE.AmbientLight(0x202030, 0.55));
+    // 光強單位是物理量（燭光），數值要比直覺大得多——
+    // 以下數值經像素取樣調校：光圈中心約 100/255、暗部個位數，勿憑感覺改
+    this.scene.add(new THREE.AmbientLight(0x50505e, 1.0));
 
     // 手電筒：掛在相機上、微偏右下，照向前方
-    this._flash = new THREE.SpotLight(0xfff0d2, 14, 16, 0.55, 0.6, 1.4);
+    this._flash = new THREE.SpotLight(0xfff0d2, 450, 16, 0.55, 0.6, 1.4);
     this._flash.position.set(0.12, -0.08, 0);
     this._flashTarget = new THREE.Object3D();
     this._flashTarget.position.set(0, -0.1, -6);
     this.camera.add(this._flash, this._flashTarget);
     this._flash.target = this._flashTarget;
+
+    // 貼身微光：讓腳邊與極近物在光圈外仍隱約可辨
+    this._fill = new THREE.PointLight(0xffe8c8, 5, 5, 1.6);
+    this.camera.add(this._fill);
 
     this.roomGroups = new Map();
     this.doorPivots = new Map();

@@ -78,7 +78,7 @@ const GENERATORS = {
     const size = 64;
     for (let ty = 0; ty < 256; ty += size) {
       for (let tx = 0; tx < 256; tx += size) {
-        const v = 108 + rng() * 22;
+        const v = 72 + rng() * 16;
         g.fillStyle = `rgb(${v}, ${v + 3}, ${v + 2})`;
         g.fillRect(tx, ty, size, size);
         g.fillStyle = `rgba(0, 0, 0, ${0.04 + rng() * 0.08})`;
@@ -213,11 +213,11 @@ const GENERATORS = {
     const rng = mulberry32(44);
     const c = makeCanvas();
     const g = c.getContext('2d');
-    g.fillStyle = '#8a8578';
+    g.fillStyle = '#5e5a4f';
     g.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 2600; i++) {
       const v = rng();
-      g.fillStyle = v > 0.5 ? `rgba(60, 56, 46, ${0.05 + v * 0.1})` : `rgba(180, 174, 158, ${0.05 + v * 0.1})`;
+      g.fillStyle = v > 0.5 ? `rgba(40, 37, 30, ${0.05 + v * 0.1})` : `rgba(130, 124, 110, ${0.05 + v * 0.1})`;
       g.fillRect(rng() * 256, rng() * 256, 1 + rng() * 3, 1 + rng() * 3);
     }
     for (let i = 0; i < 5; i++) {

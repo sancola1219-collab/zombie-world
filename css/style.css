@@ -200,6 +200,26 @@ html, body {
 
 /* === 階段 2.5：後處理層 === */
 
+/* 永久電影暗角（#vignette 是受傷紅閃專用，另設一層） */
+#fx-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 13;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+#buildtag {
+  position: fixed;
+  right: 6px;
+  bottom: 4px;
+  z-index: 30;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(160, 152, 136, 0.5);
+  pointer-events: none;
+}
+
 #grain {
   position: fixed;
   inset: -50%;

@@ -10,19 +10,19 @@ export const ARENA = {
       id: 'armory',
       x: 0, z: 0, w: 6, d: 5, h: 3,
       floor: 'tile', walls: 'plaster',
-      light: { x: 3, y: 2.6, z: 2.5, color: 0xffe0b0, intensity: 5 },
+      light: { x: 3, y: 2.6, z: 2.5, color: 0xffdca0, intensity: 40 },
     },
     {
       id: 'corridor',
       x: 6, z: 1.5, w: 6, d: 2, h: 2.6,
       floor: 'carpet', walls: 'wallpaper',
-      light: { x: 9, y: 2.2, z: 2.5, color: 0xc09060, intensity: 2.6, flicker: true },
+      light: { x: 9, y: 2.2, z: 2.5, color: 0xc09060, intensity: 22, flicker: true },
     },
     {
       id: 'arena',
       x: 12, z: 0, w: 9, d: 8, h: 3.4,
       floor: 'wood', walls: 'wallpaper',
-      light: { x: 16.5, y: 3, z: 4, color: 0x7788bb, intensity: 3.5, flicker: true },
+      light: { x: 16.5, y: 3, z: 4, color: 0x7788bb, intensity: 30, flicker: true },
     },
   ],
   props: [
