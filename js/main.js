@@ -22,7 +22,7 @@ import { Bloater } from './game/enemies/bloater.js';
 import { separateEnemies } from './game/enemies/base.js';
 
 const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater };
-import { buildSave, applySave } from './game/gamestate.js';
+import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { STORY1 } from './levels/story1.js';
 import { HUD } from './ui/hud.js';
@@ -90,6 +90,10 @@ function boot() {
   }
   for (const t of LEVEL.entities.typewriters) renderer.addTypewriter(t.x, t.z);
   for (const n of LEVEL.npcs || []) renderer.addNpc(n.x, n.z, n.yaw || 0);
+  for (const d of LEVEL.documents || []) {
+    renderer.addPickup('doc:' + d.id, 'doc');
+    renderer.placePickup('doc:' + d.id, d.x, d.z);
+  }
   renderer.setWeaponView(arsenal.current);
   // 外部 .glb 模型（assets/models/ 有檔才替換；非同步，不擋啟動）
   loadExternalModels().then((m) => {
@@ -167,6 +171,8 @@ function boot() {
   let difficulty = 'standard';
   const npcTalked = new Set(); // 已完成首次對話的 NPC
   const firedTriggers = new Set(); // 已觸發的房間事件
+  const docsRead = new Set(); // 已閱讀文件（計入評價）
+  let readingDoc = null;
   let dialogNpc = null;
   let dialogPage = 0;
   const projectiles = new Projectiles();
@@ -263,6 +269,9 @@ function boot() {
   $('dialog').addEventListener('click', () => {
     if (mode === 'dialog') advanceDialog();
   });
+  $('docread').addEventListener('click', () => {
+    if (mode === 'read') closeDocument();
+  });
   $('btn-chapend').addEventListener('click', () => window.location.reload());
 
   $('resume').addEventListener('click', () => {
@@ -354,6 +363,35 @@ function boot() {
     return best;
   }
 
+  function nearestDocument() {
+    for (const d of LEVEL.documents || []) {
+      if (Math.hypot(d.x - player.x, d.z - player.z) < 1.1) return d;
+    }
+    return null;
+  }
+
+  function openDocument(doc) {
+    readingDoc = doc;
+    $('doc-title').textContent = doc.title;
+    $('doc-text').textContent = doc.text;
+    $('docread').style.display = 'flex';
+    setMode('read');
+    if (!docsRead.has(doc.id)) {
+      docsRead.add(doc.id);
+      if (doc.grantsKey && !inventory.keyItems.includes(doc.grantsKey)) {
+        inventory.keyItems.push(doc.grantsKey);
+        hintFlash('記下了大門備援密碼：0746', 3.5);
+      }
+      audio.play('pickup');
+    }
+  }
+
+  function closeDocument() {
+    $('docread').style.display = 'none';
+    readingDoc = null;
+    setMode('play');
+  }
+
   function nearestNpc() {
     for (const n of LEVEL.npcs || []) {
       if (Math.hypot(n.x - player.x, n.z - player.z) < 1.5) return n;
@@ -398,8 +436,11 @@ function boot() {
     setMode('end');
     const m = Math.floor(gameTime / 60);
     const s = Math.floor(gameTime % 60);
+    const total = (LEVEL.documents || []).length;
+    const rank = computeRank(gameTime, docsRead.size, total, difficulty);
+    $('chapend-rank').textContent = rank;
     $('chapend-stats').textContent =
-      `存活時間 ${m} 分 ${String(s).padStart(2, '0')} 秒．難度 ${DIFFICULTY[difficulty].name}`;
+      `存活時間 ${m} 分 ${String(s).padStart(2, '0')} 秒．文件 ${docsRead.size}/${total}．難度 ${DIFFICULTY[difficulty].name}`;
     $('chapend').style.display = 'flex';
     audio.setMusicIntensity(0);
   }
@@ -627,6 +668,9 @@ function boot() {
     });
     data.difficulty = difficulty;
     data.visited = [...visited];
+    data.docsRead = [...docsRead];
+    data.npcTalked = [...npcTalked];
+    data.firedTriggers = [...firedTriggers];
     saves.save(SAVE_KEY, data);
     audio.play('typewriter');
     $('tw-info').textContent = saves.persistent
@@ -641,6 +685,18 @@ function boot() {
     if (Array.isArray(data.visited)) {
       visited.clear();
       for (const r of data.visited) visited.add(r);
+    }
+    if (Array.isArray(data.docsRead)) {
+      docsRead.clear();
+      for (const d of data.docsRead) docsRead.add(d);
+    }
+    if (Array.isArray(data.npcTalked)) {
+      npcTalked.clear();
+      for (const n of data.npcTalked) npcTalked.add(n);
+    }
+    if (Array.isArray(data.firedTriggers)) {
+      firedTriggers.clear();
+      for (const t of data.firedTriggers) firedTriggers.add(t);
     }
     const restored = applySave(data, { player });
     inventory = restored.inventory;
@@ -688,6 +744,11 @@ function boot() {
       const a = input.actions();
       if (a.interact || a.fire) advanceStory();
       if (input.consumePressed('Escape')) beginPlay(); // 跳過劇情
+      return;
+    }
+    if (mode === 'read') {
+      const a = input.actions();
+      if (a.interact || a.fire || input.consumePressed('Escape')) closeDocument();
       return;
     }
     if (mode === 'dialog') {
@@ -865,21 +926,27 @@ function boot() {
       audio.setMusicIntensity(inCombat ? 1 : 0);
     }
 
-    // 互動優先序：NPC > 拾取 > 打字機 > 門
+    // 互動優先序：NPC > 文件 > 拾取 > 打字機 > 門
     const npc = nearestNpc();
-    const pickup = npc ? null : nearestPickup();
-    const typewriter = npc || pickup ? null : nearestTypewriter();
-    const door = npc || pickup || typewriter ? null : nearestDoor();
+    const doc = npc ? null : nearestDocument();
+    const pickup = npc || doc ? null : nearestPickup();
+    const typewriter = npc || doc || pickup ? null : nearestTypewriter();
+    const door = npc || doc || pickup || typewriter ? null : nearestDoor();
 
     if (actions.interact) {
       if (npc) openDialog(npc);
+      else if (doc) openDocument(doc);
       else if (pickup) tryPickup(pickup);
       else if (typewriter) {
         overlays.openTypewriter(saves.load(SAVE_KEY) !== null);
         setMode('typewriter');
       } else if (door) {
         if (door.lock === 'chapterExit') {
-          chapterEnd();
+          if (inventory.keyItems.includes('gatecode')) chapterEnd();
+          else {
+            audio.play('locked');
+            hintFlash('電子鎖斷電，需要備援密碼——會議室裡也許有線索', 3.5);
+          }
         } else if (door.lock && inventory.keyItems.includes(door.lock)) {
           world.doors.get(door.id).lock = null;
           audio.play('reload');
@@ -902,6 +969,8 @@ function boot() {
       if (hintOverride.t <= 0) hintOverride = null;
     } else if (npc) {
       hint(`按 E 與${npc.name}交談`);
+    } else if (doc) {
+      hint(`按 E 閱讀「${doc.title}」`);
     } else if (pickup) {
       hint(`按 E 拾取 ${ITEMS[pickup.def.item].name}`);
     } else if (typewriter) {

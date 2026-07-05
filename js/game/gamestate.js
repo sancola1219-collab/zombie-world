@@ -32,3 +32,13 @@ export function applySave(data, { player }) {
     gameTime: data.gameTime,
   };
 }
+
+// 通關評價：時間（依難度放寬/收緊）＋文件收集率。純函式，node 可測。
+export function computeRank(gameTime, docsRead, docsTotal, difficulty = 'standard') {
+  const allow = 840 * (difficulty === 'easy' ? 0.9 : difficulty === 'hard' ? 1.3 : 1); // 標準 14 分鐘
+  const docRatio = docsTotal > 0 ? docsRead / docsTotal : 1;
+  if (gameTime <= allow * 0.7 && docRatio >= 0.8) return 'S';
+  if (gameTime <= allow && docRatio >= 0.5) return 'A';
+  if (gameTime <= allow * 1.5) return 'B';
+  return 'C';
+}

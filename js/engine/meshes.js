@@ -492,7 +492,11 @@ export function buildPickupMesh(itemType) {
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.16, 0.22, 20),
     new THREE.MeshBasicMaterial({
-      color: itemType === 'heal' ? 0x3f9f4f : itemType === 'weapon' ? 0x8fa5c0 : 0xc9a94f,
+      color:
+        itemType === 'heal' ? 0x3f9f4f
+        : itemType === 'weapon' ? 0x8fa5c0
+        : itemType === 'doc' ? 0xd8d2bc
+        : 0xc9a94f,
       transparent: true,
       opacity: 0.35,
       side: THREE.DoubleSide,
@@ -519,6 +523,22 @@ export function buildPickupMesh(itemType) {
     box(item, mat(0x5a4028), 0.045, 0.1, 0.05, 0, -0.07, 0.08, 0.3); // 握把
     item.rotation.z = -0.35;                                   // 斜放地上
     item.position.y = 0.1;
+  } else if (itemType === 'doc') {
+    // 文件：微微立起的紙頁
+    const page = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.22, 0.3),
+      new THREE.MeshLambertMaterial({ color: 0xd8d2bc, side: THREE.DoubleSide })
+    );
+    page.rotation.x = -Math.PI / 2 + 0.35;
+    page.position.y = -0.08;
+    item.add(page);
+    const lines = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.2),
+      new THREE.MeshLambertMaterial({ color: 0x8a857a, side: THREE.DoubleSide })
+    );
+    lines.rotation.x = -Math.PI / 2 + 0.35;
+    lines.position.set(0, -0.075, 0.005);
+    item.add(lines);
   } else {
     // 彈藥盒
     box(item, mat(0x4a4a34), 0.2, 0.1, 0.13, 0, -0.02, 0);
