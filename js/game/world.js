@@ -13,6 +13,7 @@ export class World {
     this.doors = new Map();
     for (const d of levelData.doors) this.doors.set(d.id, { ...d, open: false });
     this.lockNames = levelData.lockNames || {};
+    this.props = levelData.props || [];
     this._wallCache = new Map();
   }
 
@@ -26,6 +27,17 @@ export class World {
       ...splitEdge(r.z, r.z + r.d, r.x, 'z', this._openingsOn(r, 'z', r.x)),
       ...splitEdge(r.z, r.z + r.d, r.x + r.w, 'z', this._openingsOn(r, 'z', r.x + r.w)),
     ];
+    // 實心道具（solid=半邊長）→ 方形障礙，玩家與敵人都會被擋
+    for (const p of this.props) {
+      if (!p.solid || p.room !== roomId) continue;
+      const s = p.solid;
+      segs.push(
+        [p.x - s, p.z - s, p.x + s, p.z - s],
+        [p.x + s, p.z - s, p.x + s, p.z + s],
+        [p.x + s, p.z + s, p.x - s, p.z + s],
+        [p.x - s, p.z + s, p.x - s, p.z - s]
+      );
+    }
     this._wallCache.set(roomId, segs);
     return segs;
   }

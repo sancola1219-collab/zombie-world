@@ -74,6 +74,54 @@ function boot() {
   input.attach(canvas);
   canvas.addEventListener('click', () => audio.unlock());
 
+  // === 觸控裝置：顯示虛擬搖桿與按鈕，全部合成既有輸入 ===
+  const isTouchOnly = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+  if (isTouchOnly) {
+    document.body.classList.add('touch');
+    $('touch-ui').style.display = 'block';
+    input.enableDragMode(); // 不請求 pointer lock、失鎖不觸發暫停
+    input.attachTouch({
+      stick: $('stick'),
+      knob: $('stick-knob'),
+      lookZone: $('look-zone'),
+      buttons: document.querySelectorAll('#touch-ui .tbtn'),
+    });
+    document.addEventListener('touchstart', () => audio.unlock(), { once: true });
+  }
+  // 覆蓋層的觸控按鈕：合成按鍵事件，走與鍵盤完全相同的路徑
+  for (const btn of document.querySelectorAll('.synth-btn')) {
+    btn.addEventListener('click', () => {
+      input.onKeyDown(btn.dataset.code);
+      input.onKeyUp(btn.dataset.code);
+    });
+  }
+
+  // === 後處理：顆粒層（JS 生成噪點圖）與選單背景（有 menu-bg.jpg 就用） ===
+  {
+    const nc = document.createElement('canvas');
+    nc.width = nc.height = 128;
+    const ng = nc.getContext('2d');
+    const img = ng.createImageData(128, 128);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.floor(Math.random() * 255);
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    ng.putImageData(img, 0, 0);
+    $('grain').style.backgroundImage = `url(${nc.toDataURL()})`;
+
+    const bg = new Image();
+    bg.onload = () => {
+      for (const id of ['loading', 'pause']) {
+        $(id).style.backgroundImage =
+          'linear-gradient(rgba(3,4,7,0.72), rgba(3,4,7,0.88)), url(assets/textures/menu-bg.jpg)';
+        $(id).style.backgroundSize = 'cover';
+        $(id).style.backgroundPosition = 'center';
+      }
+    };
+    bg.src = 'assets/textures/menu-bg.jpg'; // 缺檔靜默跳過
+  }
+
   // === 狀態 ===
   let mode = 'play'; // play | paused | inventory | typewriter | dead
   let gameTime = 0;
@@ -85,7 +133,6 @@ function boot() {
   let hintOverride = null; // {text, t}
   const rngFire = mulberry32(1234);
   const rngAI = mulberry32(5678);
-  const isTouchOnly = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
 
   function hint(text) {
     if (text === lastHint) return;
@@ -101,9 +148,10 @@ function boot() {
     mode = m;
     $('pause').style.display = m === 'paused' ? 'flex' : 'none';
     if (m === 'paused') {
-      $('pause-tip').textContent =
-        (input.dragMode ? '按住滑鼠拖曳調整視角' : '點擊畫面鎖定視角') +
-        '．WASD 移動．Shift 奔跑．E 互動．Esc 暫停';
+      $('pause-tip').textContent = isTouchOnly
+        ? '左下搖桿移動（推滿奔跑）．滑動畫面轉視角．右下按鈕互動'
+        : (input.dragMode ? '按住滑鼠拖曳調整視角' : '點擊畫面鎖定視角') +
+          '．WASD 移動．Shift 奔跑．E 互動．Esc 暫停';
     }
   }
 
@@ -129,8 +177,8 @@ function boot() {
   });
 
   function idleHint() {
+    if (isTouchOnly) return '';
     if (everLocked) return '';
-    if (isTouchOnly) return '目前版本需鍵盤滑鼠操作，觸控支援將於後續版本推出';
     if (input.dragMode) return '按住滑鼠拖曳調整視角．WASD 移動．E 互動';
     return '點擊畫面鎖定視角．WASD 移動．E 互動';
   }
@@ -274,6 +322,7 @@ function boot() {
     attackPlayer(dmg) {
       if (player.hurt(dmg)) {
         hud.damageFlash();
+        renderer.shake(0.1);
         audio.play('hurt');
         if (player.hp <= 0) die();
       }
@@ -439,6 +488,16 @@ function boot() {
       if (id && arsenal.has(id)) {
         arsenal.select(id);
         renderer.setWeaponView(id);
+        hud.setAmmo(arsenal, inventory);
+      }
+    }
+    // Q（或觸控「武器」鈕）：循環切換持有的武器
+    if (input.consumePressed('KeyQ')) {
+      const owned = WEAPON_SLOTS.filter((id) => arsenal.has(id));
+      if (owned.length > 1) {
+        const next = owned[(owned.indexOf(arsenal.current) + 1) % owned.length];
+        arsenal.select(next);
+        renderer.setWeaponView(next);
         hud.setAmmo(arsenal, inventory);
       }
     }

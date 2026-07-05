@@ -23,25 +23,53 @@
   <canvas id="ecg" width="200" height="64"></canvas>
 </div>
 <div id="vignette"></div>
+<div id="grain"></div>
+<div id="touch-ui" style="display:none">
+  <div id="look-zone"></div>
+  <div id="stick"><div id="stick-knob"></div></div>
+  <div id="tbtn-pause" class="tbtn" data-code="Escape">⏸</div>
+  <div id="tcluster">
+    <div class="tbtn" data-code="KeyQ">武器</div>
+    <div class="tbtn" data-code="KeyR">裝填</div>
+    <div class="tbtn" data-code="KeyE">互動</div>
+    <div class="tbtn tfire" data-mouse="0">射擊</div>
+  </div>
+  <div id="tbtn-inv" class="tbtn" data-code="Tab">物品</div>
+</div>
 <div id="inv" class="overlay" style="display:none">
   <div class="panel inv-panel">
     <h2>物品欄</h2>
     <div id="inv-grid"></div>
     <div id="inv-desc"></div>
-    <p class="tip">WASD/方向鍵 移動．E 使用．F 選取＋組合．G 丟棄．Tab 關閉</p>
+    <p class="tip no-touch">WASD/方向鍵 移動．E 使用．F 選取＋組合．G 丟棄．Tab 關閉</p>
+    <div class="synth-row touch-only">
+      <button class="synth-btn" data-code="KeyE">使用</button>
+      <button class="synth-btn" data-code="KeyF">組合</button>
+      <button class="synth-btn" data-code="KeyG">丟棄</button>
+      <button class="synth-btn" data-code="Tab">關閉</button>
+    </div>
   </div>
 </div>
 <div id="typewriter" class="overlay" style="display:none">
   <div class="panel">
     <h2>打字機</h2>
     <p id="tw-info"></p>
-    <p class="tip">E 存檔．R 讀取．Tab 離開</p>
+    <p class="tip no-touch">E 存檔．R 讀取．Tab 離開</p>
+    <div class="synth-row touch-only">
+      <button class="synth-btn" data-code="KeyE">存檔</button>
+      <button class="synth-btn" data-code="KeyR">讀取</button>
+      <button class="synth-btn" data-code="Tab">離開</button>
+    </div>
   </div>
 </div>
 <div id="death" class="overlay" style="display:none">
   <div class="panel">
     <h1 class="death-title">你死了</h1>
-    <p class="tip" id="death-tip">R 讀取存檔．Enter 重新開始</p>
+    <p class="tip no-touch" id="death-tip">R 讀取存檔．Enter 重新開始</p>
+    <div class="synth-row touch-only">
+      <button class="synth-btn" data-code="KeyR">讀取存檔</button>
+      <button class="synth-btn" data-code="Enter">重新開始</button>
+    </div>
   </div>
 </div>
 <div id="loading" class="overlay">

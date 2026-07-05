@@ -88,6 +88,11 @@ export class Overlays {
         cell.innerHTML = `<span class="inv-name">${def.name}</span>` +
           (s.count > 1 ? `<span class="inv-count">×${s.count}</span>` : '');
       }
+      // 觸控/滑鼠點格子＝移動游標（僅 UI 游標，不動遊戲狀態）
+      cell.addEventListener('click', () => {
+        this.cursor = i;
+        this._renderGrid(inv);
+      });
       this.gridEl.appendChild(cell);
     }
     const s = inv.slots[this.cursor];

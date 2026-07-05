@@ -37,6 +37,28 @@ test('滑鼠視角累積並在讀取後歸零', () => {
   assert.deepEqual(input.actions().look, [0, 0]);
 });
 
+test('虛擬搖桿類比值與鍵盤合併後 clamp 在 ±1', () => {
+  const input = new Input();
+  input.setTouchMove(0.5, -0.4);
+  let a = input.actions();
+  assert.equal(a.moveX, 0.5);
+  assert.equal(a.moveZ, -0.4);
+  input.onKeyDown('KeyD'); // 鍵盤 +1 疊加觸控 0.5 → clamp 1
+  a = input.actions();
+  assert.equal(a.moveX, 1);
+  input.setTouchMove(2, -3); // 超界輸入直接被 clamp
+  assert.equal(input.touchMove.x, 1);
+  assert.equal(input.touchMove.z, -1);
+});
+
+test('搖桿推滿＝奔跑，推一半不是', () => {
+  const input = new Input();
+  input.setTouchMove(0, -0.5);
+  assert.equal(input.actions().run, false);
+  input.setTouchMove(0, -0.95);
+  assert.equal(input.actions().run, true);
+});
+
 test('clearTransient：失焦後幽靈按鍵全部清除', () => {
   const input = new Input();
   input.onKeyDown('KeyW');

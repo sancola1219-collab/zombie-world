@@ -13,6 +13,13 @@ export class Input {
     this._lockErrors = 0;
     this.mouseButtons = new Set();
     this._mouseJust = new Set();
+    this.touchMove = { x: 0, z: 0 }; // 虛擬搖桿類比值（各 -1..1）
+  }
+
+  // 虛擬搖桿：螢幕上滑（負 y）＝前進（moveZ 負），直接映射
+  setTouchMove(x, z) {
+    this.touchMove.x = Math.max(-1, Math.min(1, x));
+    this.touchMove.z = Math.max(-1, Math.min(1, z));
   }
 
   onMouseDown(button) {
@@ -80,10 +87,15 @@ export class Input {
   }
 
   actions() {
+    const kbX = (this.pressed('KeyD') ? 1 : 0) - (this.pressed('KeyA') ? 1 : 0);
+    const kbZ = (this.pressed('KeyS') ? 1 : 0) - (this.pressed('KeyW') ? 1 : 0);
     return {
-      moveX: (this.pressed('KeyD') ? 1 : 0) - (this.pressed('KeyA') ? 1 : 0),
-      moveZ: (this.pressed('KeyS') ? 1 : 0) - (this.pressed('KeyW') ? 1 : 0),
-      run: this.pressed('ShiftLeft') || this.pressed('ShiftRight'),
+      moveX: Math.max(-1, Math.min(1, kbX + this.touchMove.x)),
+      moveZ: Math.max(-1, Math.min(1, kbZ + this.touchMove.z)),
+      run:
+        this.pressed('ShiftLeft') ||
+        this.pressed('ShiftRight') ||
+        Math.hypot(this.touchMove.x, this.touchMove.z) > 0.85, // 搖桿推滿＝奔跑
       interact: this.consumePressed('KeyE'),
       fire: this.consumeMouseJust(0),
       reload: this.consumePressed('KeyR'),
@@ -142,5 +154,102 @@ export class Input {
       this.onMouseUp(e.button);
       this._dragging = false;
     });
+  }
+
+  // 觸控接線：搖桿（多點追蹤 identifier）、右半螢幕滑動視角、
+  // 虛擬按鈕一律合成既有按鍵/滑鼠事件——不新增任何遊戲邏輯路徑。
+  attachTouch({ stick, knob, lookZone, buttons }) {
+    let stickId = null;
+    let lookId = null;
+    let lookLast = null;
+
+    const setStick = (t) => {
+      const r = stick.getBoundingClientRect();
+      const rad = r.width / 2;
+      let dx = (t.clientX - (r.left + rad)) / rad;
+      let dy = (t.clientY - (r.top + rad)) / rad;
+      const len = Math.hypot(dx, dy);
+      if (len > 1) {
+        dx /= len;
+        dy /= len;
+      }
+      this.setTouchMove(dx, dy);
+      if (knob) knob.style.transform = `translate(${dx * 34}px, ${dy * 34}px)`;
+    };
+    const resetStick = () => {
+      stickId = null;
+      this.setTouchMove(0, 0);
+      if (knob) knob.style.transform = 'translate(0px, 0px)';
+    };
+
+    stick.addEventListener(
+      'touchstart',
+      (e) => {
+        e.preventDefault();
+        if (stickId === null) {
+          stickId = e.changedTouches[0].identifier;
+          setStick(e.changedTouches[0]);
+        }
+      },
+      { passive: false }
+    );
+    lookZone.addEventListener(
+      'touchstart',
+      (e) => {
+        e.preventDefault();
+        if (lookId === null) {
+          const t = e.changedTouches[0];
+          lookId = t.identifier;
+          lookLast = [t.clientX, t.clientY];
+        }
+      },
+      { passive: false }
+    );
+    window.addEventListener(
+      'touchmove',
+      (e) => {
+        for (const t of e.changedTouches) {
+          if (t.identifier === stickId) {
+            setStick(t);
+          } else if (t.identifier === lookId) {
+            this.onMouseMove((t.clientX - lookLast[0]) * 2.4, (t.clientY - lookLast[1]) * 2.4);
+            lookLast = [t.clientX, t.clientY];
+          }
+        }
+      },
+      { passive: false }
+    );
+    const endTouch = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === stickId) resetStick();
+        else if (t.identifier === lookId) lookId = null;
+      }
+    };
+    window.addEventListener('touchend', endTouch);
+    window.addEventListener('touchcancel', endTouch);
+
+    for (const btn of buttons) {
+      const code = btn.dataset.code;
+      const mouse = btn.dataset.mouse;
+      btn.addEventListener(
+        'touchstart',
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          btn.classList.add('active');
+          if (mouse !== undefined) this.onMouseDown(Number(mouse));
+          else this.onKeyDown(code);
+        },
+        { passive: false }
+      );
+      const release = (e) => {
+        e.preventDefault();
+        btn.classList.remove('active');
+        if (mouse !== undefined) this.onMouseUp(Number(mouse));
+        else this.onKeyUp(code);
+      };
+      btn.addEventListener('touchend', release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+    }
   }
 }

@@ -55,6 +55,27 @@ test('to:null 的裝飾鎖門不產生連通邊', () => {
   assert.deepEqual([...w.reachableRooms('study')].sort(), ['hall', 'study']);
 });
 
+test('solid 道具在所屬房間產生方形障礙段', () => {
+  const data = {
+    id: 't',
+    rooms: [{ id: 'r', x: 0, z: 0, w: 10, d: 10, h: 3 }],
+    doors: [],
+    props: [
+      { room: 'r', type: 'crate', x: 5, z: 5, solid: 0.4 },
+      { room: 'other', type: 'crate', x: 2, z: 2, solid: 0.4 }, // 別房的不算
+      { room: 'r', type: 'blood', x: 3, z: 3 }, // 無 solid 不算
+    ],
+  };
+  const w = new World(data);
+  const segs = w.wallSegments('r');
+  assert.ok(hasSegment(segs, [4.6, 4.6, 5.4, 4.6]));
+  assert.ok(hasSegment(segs, [5.4, 4.6, 5.4, 5.4]));
+  assert.ok(hasSegment(segs, [5.4, 5.4, 4.6, 5.4]));
+  assert.ok(hasSegment(segs, [4.6, 5.4, 4.6, 4.6]));
+  // 4 邊牆 + 4 段障礙，別房道具與非實心道具不產生
+  assert.equal(segs.length, 8);
+});
+
 test('roomAt 定位', () => {
   const w = new World(SANDBOX);
   assert.equal(w.roomAt(2, 3), 'hall');
