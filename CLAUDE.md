@@ -38,7 +38,8 @@ tests/       node:test 單元測試（*.test.js）
 - **測試**：`node --test`（必須全綠才 commit；新邏輯先寫測試）
 - **本地執行**：`npx http-server -p 8123 .`（或 Claude Code 用 `.claude/launch.json` 的 preview）
 - **自動驗證**：頁面暴露 `window.__zw = { world, player, input, loop, renderer, saves, setPaused }`；瀏覽器隱藏時照樣可測——`__zw.loop.stop()` 後用 `__zw.loop.tick(t)` 手動餵時間同步驅動，斷言狀態（不要依賴截圖，隱藏視窗會逾時）
-- **發佈**：`git push`（main 分支，Pages 自動部署）。PAT 在 Windows 認證管理員；PowerShell 5.1 讀憑證要用 cmd 重導向（`git credential fill`），不要用 PS 管線餵 secret
+- **發佈**：`git push`（main 分支，Pages 自動部署）。PAT 在 Windows 認證管理員；PowerShell 5.1 讀憑證要用 cmd 重導向（`git credential fill`），不要用 PS 管線餵 secret。**每次發佈必須同步 bump `index.html` 的入口 `?v=` 與 `#buildtag` 版本文字**——GitHub Pages CDN 快取 10 分鐘，使用者靠右下角版本徽章判斷載到哪一版（「畫面沒變」十之八九是快取）
+- **燈光單位**：three 的光強是物理單位（燭光），手電筒 450、房燈 20~40 才正常；個位數＝幾乎全黑。改光後用 preview_eval `gl.readPixels` 取樣亮度驗證（目標：光圈中心 ~100/255、暗部 <40），不要憑截圖感覺（此機瀏覽器截圖常逾時）
 - **commit**：每完成一個任務就 commit，繁中訊息
 
 ## 已知陷阱（都吃過虧）
