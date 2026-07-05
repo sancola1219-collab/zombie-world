@@ -198,6 +198,27 @@ html, body {
   border-color: #8a7a55;
 }
 
+/* === 階段 3：小地圖 === */
+
+#minimap {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(8, 9, 14, 0.55);
+  border: 1px solid rgba(160, 152, 130, 0.4);
+  border-radius: 4px;
+}
+
+body.touch #minimap {
+  top: 74px; /* 讓出暫停鈕位置 */
+}
+
+#bigmap-canvas {
+  background: rgba(8, 9, 14, 0.6);
+  border: 1px solid rgba(160, 152, 130, 0.5);
+  margin-top: 8px;
+}
+
 /* === 階段 2.5：後處理層 === */
 
 /* 永久電影暗角（#vignette 是受傷紅閃專用，另設一層） */
@@ -341,6 +362,14 @@ html, body {
 #tbtn-inv {
   position: absolute;
   right: 24px;
+  bottom: 232px;
+  width: 56px;
+  height: 56px;
+}
+
+#tbtn-map {
+  position: absolute;
+  right: 92px;
   bottom: 232px;
   width: 56px;
   height: 56px;

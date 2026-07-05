@@ -54,6 +54,8 @@ export class Player {
     this.eyeHeight = EYE_HEIGHT;
     this.hp = 100;
     this.iframes = 0; // 受擊後短暫無敵，避免被連續咬融化
+    this.poison = 0; // 中毒剩餘秒數（>0 時每 0.8s 扣 3 血，藍草藥可解）
+    this._poisonTick = 0;
   }
 
   // 回傳是否實際受傷（無敵幀中回 false）
@@ -81,6 +83,14 @@ export class Player {
 
   update(dt, actions, world) {
     if (this.iframes > 0) this.iframes = Math.max(0, this.iframes - dt);
+    if (this.poison > 0) {
+      this.poison = Math.max(0, this.poison - dt);
+      this._poisonTick += dt;
+      if (this._poisonTick >= 0.8) {
+        this._poisonTick = 0;
+        if (this.hp > 1) this.hp = Math.max(1, this.hp - 3); // 毒不會直接毒死
+      }
+    }
     const fwd = -actions.moveZ; // W 為 -1 → fwd=+1 前進
     let dirX = -Math.sin(this.yaw) * fwd + Math.cos(this.yaw) * actions.moveX;
     let dirZ = -Math.cos(this.yaw) * fwd - Math.sin(this.yaw) * actions.moveX;

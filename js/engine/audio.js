@@ -18,9 +18,88 @@ export class AudioEngine {
       this.master.gain.value = 0.5;
       this.master.connect(this.ctx.destination);
       this._startAmbient();
+      this._startMusic();
       this._hbInterval = setInterval(() => this._heartbeatPump(), 120);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  // === 恐怖配樂（程序生成，零外部音檔） ===
+  // 三層：低音 drone（常駐）＋不和諧敲擊（隨機）＋高頻幽鳴（漂移）。
+  // intensity 0=探索 →1=戰鬥（drone 變厚、敲擊變密、加入低音脈衝）。
+  setMusicIntensity(v) {
+    this._musicIntensity = Math.max(0, Math.min(1, v));
+    if (this._droneGain && this.ctx) {
+      const t = this.ctx.currentTime;
+      this._droneGain.gain.linearRampToValueAtTime(0.05 + this._musicIntensity * 0.05, t + 1.2);
+      this._pulseGain.gain.linearRampToValueAtTime(this._musicIntensity * 0.14, t + 0.8);
+    }
+  }
+
+  _startMusic() {
+    this._musicIntensity = 0;
+    const t = this.ctx.currentTime;
+    // 層 1：雙鋸齒微失諧 drone（不和諧小二度），慢速濾波起伏
+    this._droneGain = this.ctx.createGain();
+    this._droneGain.gain.value = 0.05;
+    const droneFilter = this.ctx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    droneFilter.frequency.value = 160;
+    const fLfo = this.ctx.createOscillator();
+    fLfo.frequency.value = 0.045;
+    const fLfoG = this.ctx.createGain();
+    fLfoG.gain.value = 70;
+    fLfo.connect(fLfoG);
+    fLfoG.connect(droneFilter.frequency);
+    for (const freq of [55, 58.3]) { // A1 與升半音的摩擦
+      const o = this.ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = freq;
+      o.connect(droneFilter);
+      o.start(t);
+    }
+    droneFilter.connect(this._droneGain);
+    this._droneGain.connect(this.master);
+    fLfo.start(t);
+
+    // 層 2：戰鬥低音脈衝（平時 0）
+    this._pulseGain = this.ctx.createGain();
+    this._pulseGain.gain.value = 0;
+    const pulseOsc = this.ctx.createOscillator();
+    pulseOsc.type = 'sine';
+    pulseOsc.frequency.value = 42;
+    const pulseTrem = this.ctx.createGain();
+    const pulseLfo = this.ctx.createOscillator();
+    pulseLfo.type = 'square';
+    pulseLfo.frequency.value = 2.2;
+    const pulseLfoG = this.ctx.createGain();
+    pulseLfoG.gain.value = 1;
+    pulseLfo.connect(pulseLfoG);
+    pulseLfoG.connect(pulseTrem.gain);
+    pulseOsc.connect(pulseTrem);
+    pulseTrem.connect(this._pulseGain);
+    this._pulseGain.connect(this.master);
+    pulseOsc.start(t);
+    pulseLfo.start(t);
+
+    // 層 3：隨機不和諧敲擊與幽鳴（setInterval 排程，隱藏分頁節流無妨——遊戲會暫停）
+    this._musicTimer = setInterval(() => {
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      const roll = Math.random();
+      const dense = this._musicIntensity > 0.5;
+      if (roll < (dense ? 0.55 : 0.3)) {
+        // 小二度音對敲擊（鋼琴弦悶擊感）
+        const base = [110, 147, 196][Math.floor(Math.random() * 3)];
+        this._tone({ type: 'triangle', from: base, vol: 0.05, dur: 1.6 });
+        this._tone({ type: 'triangle', from: base * 1.06, vol: 0.04, dur: 1.8, when: 0.04 });
+      } else if (roll < 0.45) {
+        // 高頻幽鳴滑音
+        this._tone({ type: 'sine', from: 1450 + Math.random() * 600, to: 1200, vol: 0.016, dur: 3.5 });
+      } else if (roll < 0.55) {
+        // 遠處低沉悶響
+        this._burst({ freq: 120, vol: 0.12, dur: 0.9 });
+      }
+    }, 4200);
   }
 
   play(name) {
@@ -33,6 +112,7 @@ export class AudioEngine {
     if (!this.ctx) return;
     if (weapon === 'shotgun') this._shotgunShot();
     else if (weapon === 'magnum') this._bigShot();
+    else if (weapon === 'smg') this._smgShot();
     else this._handgunShot();
   }
 
@@ -148,6 +228,64 @@ export class AudioEngine {
 
   _knife() {
     this._burst({ type: 'bandpass', freq: 2400, vol: 0.15, dur: 0.08 });
+  }
+
+  _katana() {
+    // 破空聲：帶通噪音由高掃低＋薄金屬鳴
+    this._burst({ type: 'bandpass', freq: 3200, vol: 0.22, dur: 0.14 });
+    this._burst({ type: 'bandpass', freq: 1600, vol: 0.14, dur: 0.1, when: 0.05 });
+    this._tone({ type: 'sine', from: 2200, to: 900, vol: 0.03, dur: 0.16 });
+  }
+
+  _smgShot() {
+    this._burst({ type: 'highpass', freq: 1100, vol: 0.4, dur: 0.05 });
+    this._burst({ freq: 260, vol: 0.35, dur: 0.07 });
+  }
+
+  _flame() {
+    this._burst({ type: 'lowpass', freq: 900, vol: 0.18, dur: 0.14 });
+    this._burst({ type: 'highpass', freq: 2600, vol: 0.05, dur: 0.12 });
+  }
+
+  _rocketLaunch() {
+    this._burst({ type: 'lowpass', freq: 500, vol: 0.7, dur: 0.35 });
+    this._tone({ type: 'sawtooth', from: 220, to: 60, vol: 0.14, dur: 0.4 });
+  }
+
+  _explosion() {
+    this._burst({ freq: 90, vol: 1.0, dur: 0.7 });
+    this._burst({ type: 'bandpass', freq: 700, vol: 0.5, dur: 0.3 });
+    this._tone({ type: 'sine', from: 70, to: 30, vol: 0.5, dur: 0.7 });
+  }
+
+  _doggrowl() {
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(55, t);
+    osc.frequency.linearRampToValueAtTime(48, t + 0.5);
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 240;
+    const trem = this.ctx.createGain(); // 喉音顫動
+    const lfo = this.ctx.createOscillator();
+    lfo.frequency.value = 26;
+    const lfoG = this.ctx.createGain();
+    lfoG.gain.value = 0.4;
+    lfo.connect(lfoG);
+    lfoG.connect(trem.gain);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    osc.connect(f);
+    f.connect(trem);
+    trem.connect(g);
+    g.connect(this.master);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + 0.7);
+    lfo.stop(t + 0.7);
   }
 
   _groan() {

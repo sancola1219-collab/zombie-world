@@ -11,6 +11,10 @@ export class HUD {
     this.hitEl = document.getElementById('hitmarker');
     this.ecg = document.getElementById('ecg');
     this.ecgCtx = this.ecg.getContext('2d');
+    this.minimap = document.getElementById('minimap');
+    this.minimapCtx = this.minimap ? this.minimap.getContext('2d') : null;
+    this.bigmap = document.getElementById('bigmap-canvas');
+    this.bigmapCtx = this.bigmap ? this.bigmap.getContext('2d') : null;
     this._phase = 0;
     this._samples = new Array(110).fill(0.5);
     this._vignette = 0;
@@ -82,6 +86,82 @@ export class HUD {
     }
     c.stroke();
   }
+}
+
+// === 地圖（小地圖＋M 大地圖共用繪製；只畫「已探索」房間） ===
+
+HUD.prototype.drawMinimap = function (world, player, visited, typewriters) {
+  if (this.minimapCtx) {
+    renderMap(this.minimapCtx, this.minimap.width, this.minimap.height, world, player, visited, typewriters, false);
+  }
+};
+
+HUD.prototype.drawBigmap = function (world, player, visited, typewriters) {
+  if (this.bigmapCtx) {
+    renderMap(this.bigmapCtx, this.bigmap.width, this.bigmap.height, world, player, visited, typewriters, true);
+  }
+};
+
+function renderMap(c, W, H, world, player, visited, typewriters, big) {
+  c.clearRect(0, 0, W, H);
+  const rooms = [...world.rooms.values()].filter((r) => visited.has(r.id));
+  if (!rooms.length) return;
+  let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+  for (const r of rooms) {
+    minX = Math.min(minX, r.x);
+    minZ = Math.min(minZ, r.z);
+    maxX = Math.max(maxX, r.x + r.w);
+    maxZ = Math.max(maxZ, r.z + r.d);
+  }
+  const pad = big ? 30 : 12;
+  const s = Math.min((W - pad * 2) / (maxX - minX), (H - pad * 2) / (maxZ - minZ));
+  const ox = (W - (maxX - minX) * s) / 2 - minX * s;
+  const oz = (H - (maxZ - minZ) * s) / 2 - minZ * s;
+  const px = (x) => x * s + ox;
+  const pz = (z) => z * s + oz;
+
+  for (const r of rooms) {
+    c.fillStyle = 'rgba(70, 74, 88, 0.45)';
+    c.fillRect(px(r.x), pz(r.z), r.w * s, r.d * s);
+    c.strokeStyle = 'rgba(190, 182, 160, 0.8)';
+    c.lineWidth = big ? 2 : 1.2;
+    c.strokeRect(px(r.x), pz(r.z), r.w * s, r.d * s);
+    if (big && r.name) {
+      c.fillStyle = 'rgba(210, 202, 180, 0.85)';
+      c.font = '13px "Noto Sans TC", sans-serif';
+      c.textAlign = 'center';
+      c.fillText(r.name, px(r.x + r.w / 2), pz(r.z + r.d / 2) + 4);
+    }
+  }
+  // 門（缺口標記）：兩側房間任一已探索就畫
+  for (const d of world.doors.values()) {
+    if (!visited.has(d.from) && !visited.has(d.to)) continue;
+    c.fillStyle = d.lock ? 'rgba(200, 80, 60, 0.9)' : 'rgba(190, 182, 160, 0.9)';
+    const w = (big ? 5 : 3) + d.width * s * 0.3;
+    c.fillRect(px(d.at[0]) - w / 2, pz(d.at[1]) - w / 2, w, w);
+  }
+  // 打字機
+  for (const t of typewriters || []) {
+    const room = world.roomAt(t.x, t.z);
+    if (!visited.has(room)) continue;
+    c.fillStyle = 'rgba(120, 200, 140, 0.95)';
+    c.beginPath();
+    c.arc(px(t.x), pz(t.z), big ? 5 : 3, 0, Math.PI * 2);
+    c.fill();
+  }
+  // 玩家箭頭（yaw=0 面向 -z＝畫面上方）
+  c.save();
+  c.translate(px(player.x), pz(player.z));
+  c.rotate(-player.yaw);
+  c.fillStyle = '#e8dfc8';
+  const a = big ? 9 : 6;
+  c.beginPath();
+  c.moveTo(0, -a);
+  c.lineTo(a * 0.62, a * 0.8);
+  c.lineTo(-a * 0.62, a * 0.8);
+  c.closePath();
+  c.fill();
+  c.restore();
 }
 
 // 一個心跳週期的波形（0..1 相位 → 0..1 振幅，0.5 為基線偏下）

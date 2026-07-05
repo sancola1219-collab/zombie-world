@@ -2,14 +2,24 @@
 // 時間一律用「邏輯時間」（累積的固定時步秒數），不用牆鐘。
 export const WEAPONS = {
   knife: { name: '小刀', melee: true, damage: 15, range: 1.6, interval: 0.55 },
+  katana: { name: '武士刀', melee: true, damage: 45, range: 1.9, interval: 0.7, sweep: 3 }, // 三向扇形掃擊
   handgun: { name: '手槍', damage: 25, magazine: 15, interval: 0.4, ammoItem: 'handgun_ammo', spread: 0.012 },
   shotgun: { name: '霰彈槍', pellets: 8, damage: 12, magazine: 7, interval: 1.05, ammoItem: 'shotgun_shells', spread: 0.07 },
   magnum: { name: '麥格農', damage: 150, magazine: 6, interval: 0.95, ammoItem: 'magnum_ammo', spread: 0.008, pierce: true },
+  smg: { name: '衝鋒槍', damage: 12, magazine: 30, interval: 0.09, ammoItem: 'smg_ammo', spread: 0.035, auto: true },
+  flamethrower: {
+    name: '火焰噴射槍', spray: true, damage: 8, range: 4, arc: 0.44,
+    magazine: 100, interval: 0.1, ammoItem: 'fuel', auto: true,
+  },
+  rocket: {
+    name: '火箭炮', projectile: true, damage: 300, radius: 2.5, speed: 14,
+    magazine: 1, interval: 1.6, ammoItem: 'rocket_ammo',
+  },
 };
 
 export class Arsenal {
   constructor() {
-    this.owned = ['knife'];
+    this.owned = ['knife', 'katana']; // 武士刀開局持有
     this.current = 'knife';
     this.loaded = {}; // weaponId → 彈匣內發數
     this._nextFireAt = 0;
@@ -42,7 +52,10 @@ export class Arsenal {
     const def = WEAPONS[this.current];
     if (def.melee) {
       this._nextFireAt = now + def.interval;
-      return { weapon: this.current, melee: true, damage: def.damage, range: def.range };
+      return {
+        weapon: this.current, melee: true, damage: def.damage,
+        range: def.range, sweep: def.sweep || 1,
+      };
     }
     if ((this.loaded[this.current] || 0) <= 0) {
       this._nextFireAt = now + 0.25; // 空膛喀聲也有間隔
@@ -50,6 +63,12 @@ export class Arsenal {
     }
     this.loaded[this.current] -= 1;
     this._nextFireAt = now + def.interval;
+    if (def.spray) {
+      return { weapon: this.current, spray: true, damage: def.damage, range: def.range, arc: def.arc };
+    }
+    if (def.projectile) {
+      return { weapon: this.current, projectile: true, damage: def.damage, radius: def.radius, speed: def.speed };
+    }
     return {
       weapon: this.current,
       pellets: def.pellets || 1,

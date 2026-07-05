@@ -37,9 +37,9 @@ export class Input {
     return had;
   }
 
-  // 消費 1-4 數字鍵，回傳 0-3 或 null
+  // 消費 1-8 數字鍵，回傳 0-7 或 null
   consumeWeaponSlot() {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 8; i++) {
       if (this.consumePressed(`Digit${i}`)) return i - 1;
     }
     return null;
@@ -98,6 +98,7 @@ export class Input {
         Math.hypot(this.touchMove.x, this.touchMove.z) > 0.85, // 搖桿推滿＝奔跑
       interact: this.consumePressed('KeyE'),
       fire: this.consumeMouseJust(0),
+      fireHeld: this.mouseButtons.has(0), // 全自動/持續噴射武器用
       reload: this.consumePressed('KeyR'),
       inventory: this.consumePressed('Tab'),
       weaponSlot: this.consumeWeaponSlot(),

@@ -9,7 +9,8 @@ import { mulberry32 } from './engine/rng.js';
 import { World } from './game/world.js';
 import { Player } from './game/player.js';
 import { Inventory, ITEMS } from './game/items.js';
-import { Arsenal } from './game/weapons.js';
+import { Arsenal, WEAPONS } from './game/weapons.js';
+import { Projectiles } from './game/projectiles.js';
 import { castShot, jitterDir } from './game/combat.js';
 import { Zombie } from './game/enemies/zombie.js';
 import { Dog } from './game/enemies/dog.js';
@@ -21,7 +22,12 @@ import { Overlays } from './ui/overlays.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_KEY = 'zombie-world-save';
-const WEAPON_SLOTS = ['knife', 'handgun', 'shotgun', 'magnum'];
+const WEAPON_SLOTS = ['knife', 'katana', 'handgun', 'shotgun', 'magnum', 'smg', 'flamethrower', 'rocket'];
+const DIFFICULTY = {
+  easy: { name: '輕鬆', dmg: 0.6, hp: 0.8, ammo: 1.5 },
+  standard: { name: '標準', dmg: 1.0, hp: 1.0, ammo: 1.0 },
+  hard: { name: '艱難', dmg: 1.4, hp: 1.2, ammo: 0.7 },
+};
 const LEVEL = ARENA;
 
 function boot() {
@@ -60,6 +66,12 @@ function boot() {
   const enemies = LEVEL.entities.enemies.map((d) =>
     d.type === 'dog' ? new Dog({ id: d.id, x: d.x, z: d.z }) : new Zombie({ id: d.id, x: d.x, z: d.z })
   );
+  const applyDifficultyHp = () => {
+    for (const e of enemies) {
+      if (!e._baseHp) e._baseHp = e.hp;
+      if (!e.dead) e.hp = Math.round(e._baseHp * diff().hp);
+    }
+  }; // 初始呼叫在狀態區宣告之後（避免 TDZ）
 
   renderer.buildLevel(world);
   for (const e of enemies) renderer.addEnemy(e.id, e.type);
@@ -128,7 +140,7 @@ function boot() {
   }
 
   // === 狀態 ===
-  let mode = 'play'; // play | paused | inventory | typewriter | dead
+  let mode = 'play'; // play | paused | inventory | typewriter | map | dead
   let gameTime = 0;
   let stepDistance = 0;
   let activeRoom = null;
@@ -136,8 +148,17 @@ function boot() {
   let lastHint = null;
   let everLocked = false;
   let hintOverride = null; // {text, t}
+  let difficulty = 'standard';
+  const projectiles = new Projectiles();
+  const burning = new Map(); // enemy → {left, next}（火焰 DoT）
+  const visited = new Set(); // 已探索房間（小地圖）
+  let mapDrawTick = 0;
+  let growlCooldown = 0;
+  let musicOn = false;
   const rngFire = mulberry32(1234);
   const rngAI = mulberry32(5678);
+
+  const diff = () => DIFFICULTY[difficulty];
 
   function hint(text) {
     if (text === lastHint) return;
@@ -194,6 +215,7 @@ function boot() {
     const roomId = world.roomAt(player.x, player.z) ?? activeRoom;
     if (roomId === null || (roomId === activeRoom && !force)) return;
     activeRoom = roomId;
+    visited.add(roomId);
     activeRoomIds = [roomId];
     for (const d of world.doorsOfRoom(roomId)) {
       const other = d.from === roomId ? d.to : d.from;
@@ -288,16 +310,77 @@ function boot() {
     const segs = shotWallSegments();
 
     if (shot.melee) {
-      audio.play('knife');
-      renderer.kickViewmodel(0.03);
-      const hit = castShot({ origin, dir: baseDir, enemies, wallSegments: segs, maxRange: shot.range });
-      if (hit) applyHit(hit, baseDir, shot.damage);
+      // 武士刀：三向扇形掃擊（可同時命中多個敵人）；小刀：單向
+      if (shot.sweep > 1) {
+        audio.play('katana');
+        renderer.swingViewmodel();
+        const hitEnemies = new Set();
+        for (const off of [-0.35, 0, 0.35]) {
+          const cy = Math.cos(player.pitch);
+          const dir = {
+            x: -Math.sin(player.yaw + off) * cy,
+            y: Math.sin(player.pitch),
+            z: -Math.cos(player.yaw + off) * cy,
+          };
+          const hit = castShot({ origin, dir, enemies, wallSegments: segs, maxRange: shot.range });
+          if (hit && !hitEnemies.has(hit.enemy)) {
+            hitEnemies.add(hit.enemy);
+            applyHit(hit, dir, shot.damage);
+          }
+        }
+      } else {
+        audio.play('knife');
+        renderer.kickViewmodel(0.03);
+        const hit = castShot({ origin, dir: baseDir, enemies, wallSegments: segs, maxRange: shot.range });
+        if (hit) applyHit(hit, baseDir, shot.damage);
+      }
+      return;
+    }
+
+    if (shot.spray) {
+      // 火焰噴射：錐形範圍傷害＋點燃 DoT
+      audio.play('flame');
+      renderer.flameJet();
+      alertNearbyEnemies();
+      const cosArc = Math.cos(shot.arc);
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const dx = e.x - player.x;
+        const dz = e.z - player.z;
+        const d = Math.hypot(dx, dz);
+        if (d > shot.range || d < 1e-6) continue;
+        const dot = (dx / d) * baseDir.x + (dz / d) * baseDir.z;
+        if (dot < cosArc) continue;
+        e.hurt(shot.damage, 'body');
+        burning.set(e, { left: 2, next: 0.5 });
+        hud.hitmark();
+      }
+      hud.setAmmo(arsenal, inventory);
+      return;
+    }
+
+    if (shot.projectile) {
+      audio.play('rocketLaunch');
+      renderer.kickViewmodel(0.13);
+      alertNearbyEnemies();
+      projectiles.spawn({
+        x: player.x + baseDir.x * 0.6,
+        y: player.eyeHeight - 0.1,
+        z: player.z + baseDir.z * 0.6,
+        dirX: baseDir.x,
+        dirY: baseDir.y,
+        dirZ: baseDir.z,
+        speed: shot.speed,
+        damage: shot.damage,
+        radius: shot.radius,
+      });
+      hud.setAmmo(arsenal, inventory);
       return;
     }
 
     audio.gunshot(shot.weapon);
     renderer.muzzleFlash();
-    renderer.kickViewmodel(shot.weapon === 'shotgun' ? 0.1 : 0.06);
+    renderer.kickViewmodel(shot.weapon === 'shotgun' ? 0.1 : shot.weapon === 'smg' ? 0.035 : 0.06);
     alertNearbyEnemies();
     for (let i = 0; i < shot.pellets; i++) {
       const dir = jitterDir(baseDir, shot.spread, rngFire);
@@ -325,7 +408,7 @@ function boot() {
       return gameTime;
     },
     attackPlayer(dmg) {
-      if (player.hurt(dmg)) {
+      if (player.hurt(Math.round(dmg * diff().dmg))) {
         hud.damageFlash();
         renderer.shake(0.1);
         audio.play('hurt');
@@ -351,7 +434,10 @@ function boot() {
       arsenal.select(def.weapon);
       renderer.setWeaponView(def.weapon);
     } else {
-      const r = inventory.add(p.def.item, p.def.count);
+      // 難度影響彈藥拾取量
+      const def0 = ITEMS[p.def.item];
+      const count = def0.type === 'ammo' ? Math.max(1, Math.round(p.def.count * diff().ammo)) : p.def.count;
+      const r = inventory.add(p.def.item, count);
       if (r.leftover > 0) {
         // 全有或全無：部分拾取會讓存檔狀態變複雜
         inventory.takeAmmo(p.def.item, r.added); // 還原
@@ -379,6 +465,8 @@ function boot() {
       takenPickups,
       gameTime,
     });
+    data.difficulty = difficulty;
+    data.visited = [...visited];
     saves.save(SAVE_KEY, data);
     audio.play('typewriter');
     $('tw-info').textContent = saves.persistent
@@ -389,6 +477,11 @@ function boot() {
   function doLoad() {
     const data = saves.load(SAVE_KEY);
     if (!data || data.levelId !== LEVEL.id) return false;
+    if (data.difficulty && DIFFICULTY[data.difficulty]) difficulty = data.difficulty;
+    if (Array.isArray(data.visited)) {
+      visited.clear();
+      for (const r of data.visited) visited.add(r);
+    }
     const restored = applySave(data, { player });
     inventory = restored.inventory;
     arsenal = restored.arsenal;
@@ -457,6 +550,15 @@ function boot() {
       }
       return;
     }
+    if (mode === 'map') {
+      input.consumeLook();
+      input.consumeMouseJust(0);
+      if (input.consumePressed('KeyM') || input.consumePressed('Tab') || input.consumePressed('Escape')) {
+        $('bigmap').style.display = 'none';
+        setMode('play');
+      }
+      return;
+    }
     if (mode === 'dead') {
       input.consumeLook();
       const act = overlays.deathInput(input);
@@ -518,7 +620,65 @@ function boot() {
       setMode('inventory');
       return;
     }
-    if (actions.fire) tryFire();
+    if (input.consumePressed('KeyM')) {
+      hud.drawBigmap(world, player, visited, LEVEL.entities.typewriters);
+      $('bigmap').style.display = 'flex';
+      setMode('map');
+      return;
+    }
+    // 全自動/噴射武器按住連發，其餘單發
+    const wdef = WEAPONS[arsenal.current];
+    if (wdef.auto ? actions.fireHeld : actions.fire) tryFire();
+    if (wdef.auto) input.consumeMouseJust(0); // 清掉邊緣事件避免殘留
+
+    // 投射物（火箭彈）推進與爆炸
+    const events = projectiles.update(dt, { world, enemies, player });
+    for (const ev of events) {
+      renderer.explosion(ev.x, ev.y, ev.z);
+      audio.play('explosion');
+      alertNearbyEnemies();
+      for (const h of ev.hits) {
+        h.enemy.hurt(h.damage, 'body');
+        hud.hitmark();
+      }
+      if (ev.playerDamage > 0 && player.hurt(ev.playerDamage)) {
+        hud.damageFlash();
+        renderer.shake(0.2);
+        audio.play('hurt');
+        if (player.hp <= 0) die();
+      }
+    }
+
+    // 火焰 DoT
+    for (const [e, b] of burning) {
+      if (e.dead) {
+        burning.delete(e);
+        continue;
+      }
+      b.left -= dt;
+      b.next -= dt;
+      if (b.next <= 0) {
+        b.next = 0.5;
+        e.hurt(5, 'body');
+      }
+      if (b.left <= 0) burning.delete(e);
+    }
+
+    // 犬類追擊低吼
+    growlCooldown -= dt;
+    if (growlCooldown <= 0) {
+      growlCooldown = 2.4;
+      if (enemies.some((e) => e.type === 'dog' && !e.dead && e.state === 'chase')) {
+        audio.play('doggrowl');
+      }
+    }
+
+    // 配樂強度：有警覺中的活敵＝戰鬥層
+    const inCombat = enemies.some((e) => !e.dead && e.alerted);
+    if (inCombat !== musicOn) {
+      musicOn = inCombat;
+      audio.setMusicIntensity(inCombat ? 1 : 0);
+    }
 
     // 互動優先序：拾取 > 打字機 > 門
     const pickup = nearestPickup();
@@ -566,6 +726,11 @@ function boot() {
     audio.setHeartbeat(player.healthTier());
     hud.update(dt, player);
     updateActiveRooms();
+    // 小地圖每 0.25 秒重繪
+    if (++mapDrawTick >= 15) {
+      mapDrawTick = 0;
+      hud.drawMinimap(world, player, visited, LEVEL.entities.typewriters);
+    }
   }
 
   function render() {
@@ -581,6 +746,7 @@ function boot() {
   ro.observe(container);
   renderer.resize(container.clientWidth || window.innerWidth, container.clientHeight || window.innerHeight);
 
+  applyDifficultyHp();
   hud.setAmmo(arsenal, inventory);
   updateActiveRooms(true);
   loop.start();
@@ -598,6 +764,17 @@ function boot() {
     doSave,
     doLoad,
     setMode,
+    projectiles,
+    visited,
+    setDifficulty(d) {
+      if (DIFFICULTY[d]) {
+        difficulty = d;
+        applyDifficultyHp();
+      }
+    },
+    get difficulty() {
+      return difficulty;
+    },
     get mode() {
       return mode;
     },

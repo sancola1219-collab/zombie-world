@@ -60,6 +60,11 @@ export const ARENA = {
       { id: 'p-herb-r', item: 'red_herb', count: 1, x: 8, z: 2 },
       { id: 'p-shells', item: 'shotgun_shells', count: 7, x: 10.5, z: 3 },
       { id: 'p-herb-g2', item: 'green_herb', count: 1, x: 20, z: 7 },
+      { id: 'p-smg', item: 'smg_weapon', count: 1, x: 7, z: 2 },
+      { id: 'p-smgammo', item: 'smg_ammo', count: 30, x: 7.8, z: 3 },
+      { id: 'p-flamer', item: 'flamethrower_weapon', count: 1, x: 18.5, z: 1.2 },
+      { id: 'p-fuel', item: 'fuel', count: 50, x: 19.3, z: 1.5 },
+      { id: 'p-rocket', item: 'rocket_weapon', count: 1, x: 13, z: 7.2 },
     ],
     enemies: [
       { id: 'z-corridor', type: 'zombie', x: 10.5, z: 2.2 },

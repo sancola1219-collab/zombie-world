@@ -5,10 +5,17 @@ export const ITEMS = {
   red_herb: { name: '紅色草藥', type: 'heal', stack: 3, desc: '單獨使用無效，可與綠色草藥調和' },
   mixed_herb: { name: '調和草藥', type: 'heal', stack: 1, desc: '綠紅調和，完全恢復生命' },
   first_aid_spray: { name: '急救噴霧', type: 'heal', stack: 1, desc: '完全恢復生命' },
+  blue_herb: { name: '藍色草藥', type: 'heal', stack: 3, desc: '解除中毒' },
   handgun_ammo: { name: '手槍彈', type: 'ammo', stack: 45, weapon: 'handgun' },
   shotgun_shells: { name: '霰彈', type: 'ammo', stack: 21, weapon: 'shotgun' },
   magnum_ammo: { name: '麥格農彈', type: 'ammo', stack: 12, weapon: 'magnum' },
+  smg_ammo: { name: '衝鋒槍彈', type: 'ammo', stack: 90, weapon: 'smg' },
+  fuel: { name: '燃料罐', type: 'ammo', stack: 100, weapon: 'flamethrower' },
+  rocket_ammo: { name: '火箭彈', type: 'ammo', stack: 3, weapon: 'rocket' },
   shotgun_weapon: { name: '霰彈槍', type: 'weapon', weapon: 'shotgun', rounds: 4 },
+  smg_weapon: { name: '衝鋒槍', type: 'weapon', weapon: 'smg', rounds: 30 },
+  flamethrower_weapon: { name: '火焰噴射槍', type: 'weapon', weapon: 'flamethrower', rounds: 60 },
+  rocket_weapon: { name: '火箭炮', type: 'weapon', weapon: 'rocket', rounds: 1 },
 };
 
 export class Inventory {
@@ -100,6 +107,9 @@ export class Inventory {
     } else if (s.id === 'mixed_herb' || s.id === 'first_aid_spray') {
       if (player.hp >= 100) return false;
       player.hp = 100;
+    } else if (s.id === 'blue_herb') {
+      if (!(player.poison > 0)) return false;
+      player.poison = 0;
     } else {
       return false; // 紅草藥單用無效、非治療道具
     }

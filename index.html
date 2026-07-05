@@ -22,11 +22,22 @@
   <div id="hint"></div>
   <div id="ammo"></div>
   <canvas id="ecg" width="200" height="64"></canvas>
+  <canvas id="minimap" width="150" height="150"></canvas>
+</div>
+<div id="bigmap" class="overlay" style="display:none">
+  <div class="panel">
+    <h2>地圖</h2>
+    <canvas id="bigmap-canvas" width="520" height="420"></canvas>
+    <p class="tip no-touch">M / Tab 關閉</p>
+    <div class="synth-row touch-only">
+      <button class="synth-btn" data-code="KeyM">關閉</button>
+    </div>
+  </div>
 </div>
 <div id="vignette"></div>
 <div id="fx-vignette"></div>
 <div id="grain"></div>
-<div id="buildtag">v2.6.1</div>
+<div id="buildtag">v2.7.0</div>
 <div id="touch-ui" style="display:none">
   <div id="look-zone"></div>
   <div id="stick"><div id="stick-knob"></div></div>
@@ -38,6 +49,7 @@
     <div class="tbtn tfire" data-mouse="0">射擊</div>
   </div>
   <div id="tbtn-inv" class="tbtn" data-code="Tab">物品</div>
+  <div id="tbtn-map" class="tbtn" data-code="KeyM">地圖</div>
 </div>
 <div id="inv" class="overlay" style="display:none">
   <div class="panel inv-panel">
@@ -95,7 +107,7 @@
     <p>你的瀏覽器不支援 WebGL，無法執行本遊戲。</p>
   </div>
 </div>
-<script type="module" src="./js/main.js?v=261" id="zw-entry"></script>
+<script type="module" src="./js/main.js?v=270" id="zw-entry"></script>
 <script>
 // 載入看門狗（傳統 script，舊瀏覽器也會執行）：
 // module 匯入鏈（含 three CDN）任一環節失敗時 boot() 不會跑，

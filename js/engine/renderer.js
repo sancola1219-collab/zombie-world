@@ -82,6 +82,9 @@ export class Renderer {
     this.pickupMeshes = new Map();
     this._bloodBursts = [];
     this._flickers = [];
+    this._flames = []; // 火焰/爆炸粒子（純裝飾）
+    this._explosions = []; // 爆炸光衰減
+    this._vmSwing = 0;
     this._shake = 0;
     this._bobPhase = 0;
     this._lastCam = null;
@@ -228,6 +231,28 @@ export class Renderer {
     this._applyProbeNorm(inst, kind, def.animations);
     g.userData.kind = kind;
     g.userData.parts = null;
+
+    // 犬類恐怖化：壓暗毛色＋黑暗中發亮的紅眼＋外掛血腥件
+    if (kind === 'dog') {
+      inst.traverse((o) => {
+        if (o.isMesh && o.material && o.material.color) o.material.color.multiplyScalar(0.5);
+      });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2211 });
+      for (const ex of [-0.05, 0.05]) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), eyeMat);
+        eye.position.set(ex, 0.5, -0.42); // 依 0.66m 正規化體型估計的頭部位置
+        g.add(eye);
+      }
+      const gore = new THREE.MeshLambertMaterial({ color: 0x4a0d0d });
+      const rib = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), gore);
+      rib.scale.set(0.5, 1.2, 1.6);
+      rib.position.set(0.11, 0.35, 0.05); // 側腹撕裂
+      g.add(rib);
+      const spine = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), gore);
+      spine.scale.set(0.8, 0.4, 2.6);
+      spine.position.set(0, 0.52, 0.1); // 脊背血痕
+      g.add(spine);
+    }
 
     if (def.animations.length) {
       const mixer = new THREE.AnimationMixer(inst);
@@ -447,9 +472,13 @@ export class Renderer {
   _buildViewmodels() {
     this._vms = {
       knife: buildWeaponModel('knife'),
+      katana: buildWeaponModel('katana'),
       handgun: buildWeaponModel('handgun'),
       shotgun: buildWeaponModel('shotgun'),
       magnum: buildWeaponModel('magnum'),
+      smg: buildWeaponModel('smg'),
+      flamethrower: buildWeaponModel('flamethrower'),
+      rocket: buildWeaponModel('rocket'),
     };
     this.vmScene = new THREE.Scene();
     this.vmCamera = new THREE.PerspectiveCamera(62, 1, 0.01, 10);
@@ -478,6 +507,70 @@ export class Renderer {
 
   kickViewmodel(strength = 0.06) {
     this._vmKick = strength;
+  }
+
+  // 揮刀動作（武士刀/小刀）：右上→左下弧線，render 內衰減，純裝飾
+  swingViewmodel() {
+    this._vmSwing = 1;
+  }
+
+  // 火焰噴流粒子（每個噴射 tick 呼叫一次）
+  flameJet() {
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+    for (let i = 0; i < 6; i++) {
+      const t = 0.35 + Math.random() * 0.5;
+      const spread = 0.22;
+      const p = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05 + Math.random() * 0.07, 6, 5),
+        new THREE.MeshBasicMaterial({
+          color: [0xffdd66, 0xff9933, 0xff5511][Math.floor(Math.random() * 3)],
+          transparent: true,
+          opacity: 0.85,
+        })
+      );
+      p.position.copy(this.camera.position)
+        .addScaledVector(dir, 0.7 + Math.random() * 0.4)
+        .add(new THREE.Vector3((Math.random() - 0.5) * 0.2, -0.15 + (Math.random() - 0.5) * 0.15, (Math.random() - 0.5) * 0.2));
+      this.scene.add(p);
+      this._flames.push({
+        mesh: p,
+        vel: dir.clone().multiplyScalar(7 + Math.random() * 3)
+          .add(new THREE.Vector3((Math.random() - 0.5) * spread * 8, 0.6 + Math.random(), (Math.random() - 0.5) * spread * 8)),
+        life: t,
+      });
+    }
+    this._muzzle.position.copy(this.camera.position).addScaledVector(dir, 1.2);
+    this._muzzle.intensity = 18;
+  }
+
+  // 爆炸：閃光＋火球＋煙塵粒子＋震動
+  explosion(x, y, z) {
+    const light = new THREE.PointLight(0xffaa55, 300, 12, 1.2);
+    light.position.set(x, Math.max(0.5, y), z);
+    this.scene.add(light);
+    this._explosions.push({ light, life: 0.4 });
+    for (let i = 0; i < 22; i++) {
+      const fire = i < 12;
+      const p = new THREE.Mesh(
+        new THREE.SphereGeometry(fire ? 0.12 + Math.random() * 0.16 : 0.2 + Math.random() * 0.25, 6, 5),
+        new THREE.MeshBasicMaterial({
+          color: fire ? [0xffcc55, 0xff7722, 0xdd3311][i % 3] : 0x222222,
+          transparent: true,
+          opacity: fire ? 0.9 : 0.5,
+        })
+      );
+      p.position.set(x, Math.max(0.3, y), z);
+      this.scene.add(p);
+      const a = Math.random() * Math.PI * 2;
+      const up = Math.random() * 4 + (fire ? 1 : 2);
+      this._flames.push({
+        mesh: p,
+        vel: new THREE.Vector3(Math.cos(a) * (2 + Math.random() * 3), up, Math.sin(a) * (2 + Math.random() * 3)),
+        life: fire ? 0.35 + Math.random() * 0.2 : 0.7 + Math.random() * 0.4,
+      });
+    }
+    this.shake(0.16);
   }
 
   updateCamera(player) {
@@ -519,6 +612,42 @@ export class Renderer {
     this._vmKick *= 0.8;
     this._vmRoot.position.z = -0.45 + this._vmKick;
     this._vmRoot.position.y = -0.2 + Math.sin(this._bobPhase) * 0.007; // 武器隨步伐微晃
+    // 揮刀弧線：右上抬起 → 斜劈到左下
+    if (this._vmSwing > 0.01) {
+      this._vmSwing *= 0.86;
+      const s = 1 - this._vmSwing; // 0→1 揮出
+      this._vmRoot.rotation.z = -0.9 + s * 1.6;
+      this._vmRoot.rotation.x = 0.35 - s * 0.7;
+      this._vmRoot.position.x = 0.24 + Math.sin(s * Math.PI) * 0.12;
+    } else if (this._vmRoot.rotation.z !== 0) {
+      this._vmRoot.rotation.z = 0;
+      this._vmRoot.rotation.x = 0;
+      this._vmRoot.position.x = 0.24;
+      this._vmSwing = 0;
+    }
+    // 火焰/爆炸粒子
+    for (let i = this._flames.length - 1; i >= 0; i--) {
+      const f = this._flames[i];
+      f.life -= dt;
+      if (f.life <= 0) {
+        this.scene.remove(f.mesh);
+        this._flames.splice(i, 1);
+        continue;
+      }
+      f.mesh.position.addScaledVector(f.vel, dt);
+      f.vel.y += 1.5 * dt; // 火焰上飄
+      f.mesh.material.opacity *= 0.94;
+      f.mesh.scale.multiplyScalar(1.03);
+    }
+    for (let i = this._explosions.length - 1; i >= 0; i--) {
+      const e = this._explosions[i];
+      e.life -= dt;
+      e.light.intensity *= 0.82;
+      if (e.life <= 0) {
+        this.scene.remove(e.light);
+        this._explosions.splice(i, 1);
+      }
+    }
     this._shake *= 0.86;
     for (const m of this.pickupMeshes.values()) (m.userData.spin || m).rotation.y += 0.02;
 
