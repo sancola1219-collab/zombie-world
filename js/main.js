@@ -735,6 +735,7 @@ function boot() {
 
   function render() {
     renderer.updateCamera(player);
+    renderer.syncProjectiles(projectiles.list);
     renderer.render();
   }
 

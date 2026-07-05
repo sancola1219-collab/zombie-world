@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "http-server", "-p", "8123", "-c-1", "."],
       "port": 8123
+    },
+    {
+      "name": "pivot",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "-p", "8124", "-c-1", "C:/Users/凱凱/Desktop/樞紐助手"],
+      "port": 8124
     }
   ]
 }

@@ -243,19 +243,23 @@ export class AudioEngine {
   }
 
   _flame() {
-    this._burst({ type: 'lowpass', freq: 900, vol: 0.18, dur: 0.14 });
-    this._burst({ type: 'highpass', freq: 2600, vol: 0.05, dur: 0.12 });
+    this._burst({ type: 'lowpass', freq: 1100, vol: 0.5, dur: 0.16 });
+    this._burst({ type: 'bandpass', freq: 2400, vol: 0.16, dur: 0.12 });
+    // 劈啪爆裂
+    this._burst({ type: 'highpass', freq: 4200, vol: 0.08, dur: 0.03, when: Math.random() * 0.06 });
   }
 
   _rocketLaunch() {
-    this._burst({ type: 'lowpass', freq: 500, vol: 0.7, dur: 0.35 });
-    this._tone({ type: 'sawtooth', from: 220, to: 60, vol: 0.14, dur: 0.4 });
+    this._burst({ type: 'lowpass', freq: 500, vol: 1.1, dur: 0.45 });
+    this._burst({ type: 'bandpass', freq: 1500, vol: 0.35, dur: 0.2 });
+    this._tone({ type: 'sawtooth', from: 240, to: 55, vol: 0.22, dur: 0.5 });
   }
 
   _explosion() {
-    this._burst({ freq: 90, vol: 1.0, dur: 0.7 });
-    this._burst({ type: 'bandpass', freq: 700, vol: 0.5, dur: 0.3 });
-    this._tone({ type: 'sine', from: 70, to: 30, vol: 0.5, dur: 0.7 });
+    this._burst({ freq: 90, vol: 1.4, dur: 0.9 });
+    this._burst({ type: 'bandpass', freq: 700, vol: 0.7, dur: 0.35 });
+    this._tone({ type: 'sine', from: 75, to: 28, vol: 0.7, dur: 0.9 });
+    this._burst({ freq: 60, vol: 0.5, dur: 1.2, when: 0.15 }); // 餘震隆隆
   }
 
   _doggrowl() {

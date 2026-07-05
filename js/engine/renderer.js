@@ -518,30 +518,88 @@ export class Renderer {
   flameJet() {
     const dir = new THREE.Vector3();
     this.camera.getWorldDirection(dir);
-    for (let i = 0; i < 6; i++) {
-      const t = 0.35 + Math.random() * 0.5;
-      const spread = 0.22;
+    for (let i = 0; i < 12; i++) {
+      const t = 0.45 + Math.random() * 0.5;
       const p = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05 + Math.random() * 0.07, 6, 5),
+        new THREE.SphereGeometry(0.09 + Math.random() * 0.14, 6, 5),
         new THREE.MeshBasicMaterial({
-          color: [0xffdd66, 0xff9933, 0xff5511][Math.floor(Math.random() * 3)],
+          color: [0xffe08a, 0xffaa33, 0xff6611, 0xff3300][Math.floor(Math.random() * 4)],
           transparent: true,
-          opacity: 0.85,
+          opacity: 0.95,
+          fog: false, // 火焰自發光，不吃霧
         })
       );
       p.position.copy(this.camera.position)
-        .addScaledVector(dir, 0.7 + Math.random() * 0.4)
-        .add(new THREE.Vector3((Math.random() - 0.5) * 0.2, -0.15 + (Math.random() - 0.5) * 0.15, (Math.random() - 0.5) * 0.2));
+        .addScaledVector(dir, 0.6 + Math.random() * 0.5)
+        .add(new THREE.Vector3((Math.random() - 0.5) * 0.25, -0.18 + (Math.random() - 0.5) * 0.18, (Math.random() - 0.5) * 0.25));
       this.scene.add(p);
       this._flames.push({
         mesh: p,
-        vel: dir.clone().multiplyScalar(7 + Math.random() * 3)
-          .add(new THREE.Vector3((Math.random() - 0.5) * spread * 8, 0.6 + Math.random(), (Math.random() - 0.5) * spread * 8)),
+        vel: dir.clone().multiplyScalar(7.5 + Math.random() * 3.5)
+          .add(new THREE.Vector3((Math.random() - 0.5) * 2.2, 0.7 + Math.random() * 1.2, (Math.random() - 0.5) * 2.2)),
         life: t,
       });
     }
-    this._muzzle.position.copy(this.camera.position).addScaledVector(dir, 1.2);
-    this._muzzle.intensity = 18;
+    this._muzzle.position.copy(this.camera.position).addScaledVector(dir, 1.4);
+    this._muzzle.intensity = 30;
+  }
+
+  // 火箭彈可見彈體與尾焰（每 render 依邏輯清單同步；純裝飾）
+  syncProjectiles(list) {
+    if (!this._projMeshes) this._projMeshes = new Map();
+    for (const p of list) {
+      let vis = this._projMeshes.get(p);
+      if (!vis) {
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.05, 0.34, 8),
+          new THREE.MeshLambertMaterial({ color: 0x4a4e42 })
+        );
+        body.rotation.x = Math.PI / 2;
+        g.add(body);
+        const tip = new THREE.Mesh(
+          new THREE.ConeGeometry(0.05, 0.12, 8),
+          new THREE.MeshLambertMaterial({ color: 0x8a2a1a })
+        );
+        tip.rotation.x = -Math.PI / 2;
+        tip.position.z = -0.23;
+        g.add(tip);
+        const exhaust = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09, 6, 5),
+          new THREE.MeshBasicMaterial({ color: 0xffb35a, transparent: true, opacity: 0.95, fog: false })
+        );
+        exhaust.position.z = 0.26;
+        g.add(exhaust);
+        const light = new THREE.PointLight(0xffaa55, 30, 8, 1.4);
+        g.add(light);
+        this.scene.add(g);
+        vis = g;
+        this._projMeshes.set(p, g);
+      }
+      vis.position.set(p.x, p.y, p.z);
+      vis.rotation.y = Math.atan2(-p.dirX, -p.dirZ);
+      // 煙尾
+      if (Math.random() < 0.7) {
+        const smoke = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07 + Math.random() * 0.06, 5, 4),
+          new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.4 })
+        );
+        smoke.position.set(p.x, p.y, p.z);
+        this.scene.add(smoke);
+        this._flames.push({
+          mesh: smoke,
+          vel: new THREE.Vector3((Math.random() - 0.5) * 0.5, 0.5, (Math.random() - 0.5) * 0.5),
+          life: 0.5 + Math.random() * 0.3,
+        });
+      }
+    }
+    // 已爆炸/消失的清掉
+    for (const [p, g] of this._projMeshes) {
+      if (!list.includes(p)) {
+        this.scene.remove(g);
+        this._projMeshes.delete(p);
+      }
+    }
   }
 
   // 爆炸：閃光＋火球＋煙塵粒子＋震動
