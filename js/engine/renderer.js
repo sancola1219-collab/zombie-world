@@ -1,6 +1,7 @@
 ﻿// 渲染層：純視覺。遊戲狀態一律在 World/Player/Enemy，這裡只反映狀態。
 // 血粒子、槍口光衰減、拾取物旋轉屬純裝飾，在 render() 內推進不影響邏輯。
 import * as THREE from 'three';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { getTexture } from './textures.js';
 import {
   buildWeaponModel,
@@ -9,6 +10,33 @@ import {
   buildTypewriterMesh,
   buildPickupMesh,
 } from './meshes.js';
+
+// 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
+const EXT_HEIGHT = { zombie: 1.75, dog: 0.85 };
+const CLIP_PREFS = {
+  zombie: {
+    move: ['Walk'],
+    idle: ['Idle'],
+    attack: ['Punch', 'Idle_Attack'],
+    stagger: ['HitReact'],
+    death: ['Death'],
+  },
+  dog: {
+    move: ['Gallop', 'Walk'],
+    idle: ['Idle'],
+    attack: ['Attack'],
+    stagger: ['Idle_HitReact_Left', 'HitReact'],
+    death: ['Death'],
+  },
+};
+
+function findClip(animations, names) {
+  for (const want of names) {
+    const hit = animations.find((c) => c.name === want || c.name.endsWith('|' + want));
+    if (hit) return hit;
+  }
+  return null;
+}
 
 export class Renderer {
   constructor(container) {
@@ -37,7 +65,7 @@ export class Renderer {
     // 手電筒：decay=0 零距離衰減——光圈內亮度恆定（電影式而非物理式）。
     // 物理衰減會讓近身敵人吃到十幾倍光強直接爆白（v2.5.2 的雪人 bug），
     // 遠處變暗交給霧與聚光角度衰減即可
-    this._flash = new THREE.SpotLight(0xfff0d2, 3.2, 18, 0.55, 0.6, 0);
+    this._flash = new THREE.SpotLight(0xfff0d2, 16, 18, 0.55, 0.6, 0);
     this._flash.position.set(0.12, -0.08, 0);
     this._flashTarget = new THREE.Object3D();
     this._flashTarget.position.set(0, -0.1, -6);
@@ -146,16 +174,12 @@ export class Renderer {
   // === 敵人 ===
 
   addEnemy(id, type) {
-    let group;
-    const ext = this._extModels && this._extModels.get(type);
-    if (ext) {
-      group = new THREE.Group();
-      group.add(ext.clone());
-      group.userData.kind = type;
-      group.userData.parts = null; // 外部模型不做程序擺動
-    } else {
-      group = type === 'dog' ? buildDogMesh() : buildZombieMesh();
-    }
+    const group =
+      this._extModels && this._extModels.get(type)
+        ? this._makeExternalEnemy(type)
+        : type === 'dog'
+          ? buildDogMesh()
+          : buildZombieMesh();
     this.scene.add(group);
     this.enemyMeshes.set(id, group);
   }
@@ -167,15 +191,71 @@ export class Renderer {
       const model = models.get(id);
       if (!model) continue;
       g.clear();
-      g.add(model.clone());
+      g.add(normalizeStatic(model.scene.clone(), 0.5));
     }
-    for (const g of this.enemyMeshes.values()) {
-      const model = models.get(g.userData.kind);
-      if (!model) continue;
-      g.clear();
-      g.add(model.clone());
-      g.userData.parts = null;
+    for (const [id, old] of [...this.enemyMeshes]) {
+      const kind = old.userData.kind;
+      if (!models.get(kind)) continue;
+      const fresh = this._makeExternalEnemy(kind);
+      fresh.position.copy(old.position);
+      fresh.rotation.copy(old.rotation);
+      this.scene.remove(old);
+      this.scene.add(fresh);
+      this.enemyMeshes.set(id, fresh);
     }
+  }
+
+  // 骨架複製＋尺寸正規化＋動畫接線
+  _makeExternalEnemy(kind) {
+    const def = this._extModels.get(kind);
+    const inst = cloneSkeleton(def.scene);
+    inst.rotation.y = Math.PI; // 素材慣例面向 +Z，遊戲慣例 -Z
+    inst.traverse((o) => {
+      if (o.isMesh) {
+        o.frustumCulled = false; // 骨架動畫包圍盒不可靠，避免誤剔除
+        if (o.material && !Array.isArray(o.material)) {
+          // PBR 材質在本作昏暗光照下反應過暗，統一轉 Lambert（也更省手機效能）
+          o.material = new THREE.MeshLambertMaterial({
+            map: o.material.map || null,
+            color: o.material.color ? o.material.color.clone() : 0xffffff,
+            vertexColors: !!o.material.vertexColors,
+          });
+        }
+      }
+    });
+    const g = new THREE.Group();
+    g.add(normalizeStatic(inst, null, EXT_HEIGHT[kind] || 1.6));
+    g.userData.kind = kind;
+    g.userData.parts = null;
+
+    if (def.animations.length) {
+      const mixer = new THREE.AnimationMixer(inst);
+      const prefs = CLIP_PREFS[kind] || {};
+      const actions = {};
+      for (const key of Object.keys(prefs)) {
+        const clip = findClip(def.animations, prefs[key]);
+        if (clip) actions[key] = mixer.clipAction(clip);
+      }
+      if (actions.death) {
+        actions.death.setLoop(THREE.LoopOnce);
+        actions.death.clampWhenFinished = true;
+      }
+      g.userData.mixer = mixer;
+      g.userData.actions = actions;
+      g.userData.animKey = null;
+    }
+    return g;
+  }
+
+  _setEnemyAnim(g, key) {
+    const a = g.userData.actions;
+    if (!a || g.userData.animKey === key) return;
+    const next = a[key] || a.idle;
+    if (!next) return;
+    const prev = g.userData.animKey ? a[g.userData.animKey] : null;
+    if (prev && prev !== next) prev.fadeOut(0.18);
+    next.reset().fadeIn(0.18).play();
+    g.userData.animKey = key;
   }
 
   syncEnemy(id, e, visible = true) {
@@ -187,6 +267,21 @@ export class Renderer {
     g.rotation.y = e.yaw;
     g.userData.dead = e.dead;
     g.userData.moving = !e.dead && (e.state === 'chase' || e.state === 'lunge');
+
+    if (g.userData.mixer) {
+      // 外部骨架模型：狀態驅動動畫片段，倒地由 Death 動畫呈現
+      let key;
+      if (e.dead) key = 'death';
+      else if (e.state === 'stagger') key = 'stagger';
+      else if (e.state === 'windup' || e.state === 'attack' || e.state === 'lunge') key = 'attack';
+      else if (g.userData.moving) key = 'move';
+      else key = 'idle';
+      this._setEnemyAnim(g, key);
+      g.position.y = 0;
+      g.rotation.x = 0;
+      return;
+    }
+
     if (e.dead) {
       g.rotation.x = -Math.PI / 2;
       g.position.y = 0.22;
@@ -353,6 +448,11 @@ export class Renderer {
       }
     }
 
+    // 外部骨架模型：推進動畫混合器
+    for (const g of this.enemyMeshes.values()) {
+      if (g.visible && g.userData.mixer) g.userData.mixer.update(dt);
+    }
+
     // 敵人四肢擺動（僅視覺；moving/dead 旗標由 syncEnemy 設定）
     for (const g of this.enemyMeshes.values()) {
       const parts = g.userData.parts;
@@ -393,6 +493,25 @@ export class Renderer {
     this.renderer.clearDepth();
     this.renderer.render(this.vmScene, this.vmCamera);
   }
+}
+
+// 外部模型正規化：縮放到目標尺寸、腳底貼地、水平置中。
+// targetMax 用於武器（最長邊），targetHeight 用於角色（身高）。
+function normalizeStatic(obj, targetMax = null, targetHeight = null) {
+  const bbox = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3();
+  bbox.getSize(size);
+  if (size.length() === 0) return obj;
+  const s = targetHeight
+    ? targetHeight / size.y
+    : (targetMax || 0.5) / Math.max(size.x, size.y, size.z);
+  obj.scale.multiplyScalar(s);
+  const b2 = new THREE.Box3().setFromObject(obj);
+  const c = new THREE.Vector3();
+  b2.getCenter(c);
+  if (targetHeight) obj.position.set(-c.x, -b2.min.y, -c.z);
+  else obj.position.set(-c.x, -c.y, -c.z);
+  return obj;
 }
 
 function makeWall(x1, z1, x2, z2, yBase, height, mat) {
