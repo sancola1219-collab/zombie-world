@@ -12,7 +12,7 @@ import {
 } from './meshes.js';
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
-const EXT_HEIGHT = { zombie: 1.75, dog: 0.85 };
+const EXT_HEIGHT = { zombie: 1.75, dog: 0.66 }; // dog 實測補償：探測姿勢低頭、遊戲姿勢抬頭
 const CLIP_PREFS = {
   zombie: {
     move: ['Walk'],
@@ -224,7 +224,8 @@ export class Renderer {
       }
     });
     const g = new THREE.Group();
-    g.add(normalizeStatic(inst, null, EXT_HEIGHT[kind] || 1.6));
+    g.add(inst);
+    this._applyProbeNorm(inst, kind, def.animations);
     g.userData.kind = kind;
     g.userData.parts = null;
 
@@ -245,6 +246,88 @@ export class Renderer {
       g.userData.animKey = null;
     }
     return g;
+  }
+
+  // 剪影探測正規化：骨架模型的包圍盒數學不可信（bind 矩陣補償會騙人），
+  // 唯一可靠的是「實際渲染出來多大」。把模型單獨放進純黑探測場景渲染一幀，
+  // 掃描像素得出真實身高與腳底高度，換算縮放與貼地偏移。每種模型只探測一次。
+  _applyProbeNorm(inst, kind, animations) {
+    if (!this._probeCache) this._probeCache = {};
+    if (!this._probeCache[kind]) {
+      this._probeCache[kind] = this._probeMeasure(inst, EXT_HEIGHT[kind] || 1.6, animations, kind);
+    }
+    const n = this._probeCache[kind];
+    inst.scale.setScalar(n.scale);
+    inst.position.y = n.yOff;
+  }
+
+  _probeMeasure(inst, targetHeight, animations, kind) {
+    const fallback = { scale: 1, yOff: 0 }; // 量不到就信任資產原始尺度
+    const W = this.renderer.domElement.width;
+    const H = this.renderer.domElement.height;
+    if (W < 64 || H < 64) return fallback;
+
+    const probeScene = new THREE.Scene();
+    probeScene.background = new THREE.Color(0x000000);
+    probeScene.add(new THREE.AmbientLight(0xffffff, 3));
+    const cam = new THREE.PerspectiveCamera(70, W / H, 0.05, 60);
+    cam.position.set(0, 1.6, 5);
+
+    const prevParent = inst.parent;
+    const prevScale = inst.scale.x;
+    const prevY = inst.position.y;
+    probeScene.add(inst);
+    inst.position.set(0, 0, 0);
+    inst.scale.setScalar(1);
+
+    // 以「待機動畫姿勢」量測——遊戲裡顯示的就是這個姿勢，
+    // 綁定姿勢（T-pose/微蹲差異）會導致身高與腳底判斷失準
+    if (animations && animations.length) {
+      const prefs = (CLIP_PREFS[kind] && CLIP_PREFS[kind].idle) || [];
+      const clip = findClip(animations, prefs) || animations[0];
+      const probeMixer = new THREE.AnimationMixer(inst);
+      probeMixer.clipAction(clip).play();
+      probeMixer.update(0.4);
+    }
+
+    const gl = this.renderer.getContext();
+    const halfTan = Math.tan((70 * Math.PI) / 360);
+    const toWorldY = (py) => 1.6 + ((py - H / 2) / H) * 2 * 5 * halfTan;
+    const measure = () => {
+      this.renderer.clear();
+      this.renderer.render(probeScene, cam);
+      let first = -1;
+      let last = -1;
+      // 掃三欄，容忍模型稍微偏離中線
+      for (const dx of [-40, 0, 40]) {
+        const col = new Uint8Array(4 * H);
+        gl.readPixels(Math.floor(W / 2) + dx, 0, 1, H, gl.RGBA, gl.UNSIGNED_BYTE, col);
+        for (let i = 0; i < H; i++) {
+          const v = (col[i * 4] + col[i * 4 + 1] + col[i * 4 + 2]) / 3;
+          if (v > 10) {
+            if (first < 0 || i < first) first = first < 0 ? i : Math.min(first, i);
+            last = Math.max(last, i);
+          }
+        }
+      }
+      if (first < 0) return null;
+      return { h: toWorldY(last) - toWorldY(first), feet: toWorldY(first) };
+    };
+
+    let result = fallback;
+    const m1 = measure();
+    if (m1 && m1.h > 0.02) {
+      const scale = targetHeight / m1.h;
+      inst.scale.setScalar(scale);
+      const m2 = measure();
+      result = { scale, yOff: m2 ? -m2.feet : 0 };
+    }
+
+    probeScene.remove(inst);
+    inst.scale.setScalar(prevScale);
+    inst.position.y = prevY;
+    if (prevParent) prevParent.add(inst);
+    return result;
   }
 
   _setEnemyAnim(g, key) {
