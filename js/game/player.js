@@ -53,6 +53,21 @@ export class Player {
     this.radius = PLAYER_RADIUS;
     this.eyeHeight = EYE_HEIGHT;
     this.hp = 100;
+    this.iframes = 0; // 受擊後短暫無敵，避免被連續咬融化
+  }
+
+  // 回傳是否實際受傷（無敵幀中回 false）
+  hurt(damage) {
+    if (this.iframes > 0 || this.hp <= 0) return false;
+    this.hp = Math.max(0, this.hp - damage);
+    this.iframes = 0.7;
+    return true;
+  }
+
+  healthTier() {
+    if (this.hp > 66) return 'fine';
+    if (this.hp >= 33) return 'caution';
+    return 'danger';
   }
 
   look(dx, dy, sensitivity = 0.0025) {
@@ -65,6 +80,7 @@ export class Player {
   }
 
   update(dt, actions, world) {
+    if (this.iframes > 0) this.iframes = Math.max(0, this.iframes - dt);
     const fwd = -actions.moveZ; // W 為 -1 → fwd=+1 前進
     let dirX = -Math.sin(this.yaw) * fwd + Math.cos(this.yaw) * actions.moveX;
     let dirZ = -Math.cos(this.yaw) * fwd - Math.sin(this.yaw) * actions.moveX;
@@ -73,7 +89,8 @@ export class Player {
       dirX /= len;
       dirZ /= len;
     }
-    const speed = actions.run ? RUN_SPEED : WALK_SPEED;
+    // Danger（HP<33）跛行減速——經典設計
+    const speed = (actions.run ? RUN_SPEED : WALK_SPEED) * (this.hp < 33 ? 0.8 : 1);
     let nx = this.x + dirX * speed * dt;
     let nz = this.z + dirZ * speed * dt;
 

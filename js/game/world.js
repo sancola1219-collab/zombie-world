@@ -87,6 +87,31 @@ export class World {
     return seen;
   }
 
+  // 敵人尋路：從 fromId 往 toId，下一步該走哪扇「開著的門」（BFS）。
+  // 敵人不會開門，所以只走 open 的門；無路可走回 null。
+  nextDoorToward(fromId, toId) {
+    if (fromId === toId) return null;
+    const prev = new Map([[fromId, null]]); // roomId → {room, door}
+    const queue = [fromId];
+    while (queue.length) {
+      const cur = queue.shift();
+      for (const d of this.doorsOfRoom(cur)) {
+        if (!d.open || !d.to) continue;
+        const other = d.from === cur ? d.to : d.from;
+        if (prev.has(other)) continue;
+        prev.set(other, { room: cur, door: d.id });
+        if (other === toId) {
+          // 回溯到起點的第一扇門
+          let node = other;
+          while (prev.get(node).room !== fromId) node = prev.get(node).room;
+          return prev.get(node).door;
+        }
+        queue.push(other);
+      }
+    }
+    return null;
+  }
+
   roomAt(x, z) {
     for (const r of this.rooms.values()) {
       if (x >= r.x - EPS && x <= r.x + r.w + EPS && z >= r.z - EPS && z <= r.z + r.d + EPS) {

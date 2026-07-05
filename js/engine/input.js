@@ -11,12 +11,39 @@ export class Input {
     this._dragging = false;
     this._dragLast = null;
     this._lockErrors = 0;
+    this.mouseButtons = new Set();
+    this._mouseJust = new Set();
+  }
+
+  onMouseDown(button) {
+    this.mouseButtons.add(button);
+    this._mouseJust.add(button);
+  }
+
+  onMouseUp(button) {
+    this.mouseButtons.delete(button);
+  }
+
+  consumeMouseJust(button) {
+    const had = this._mouseJust.has(button);
+    this._mouseJust.delete(button);
+    return had;
+  }
+
+  // 消費 1-4 數字鍵，回傳 0-3 或 null
+  consumeWeaponSlot() {
+    for (let i = 1; i <= 4; i++) {
+      if (this.consumePressed(`Digit${i}`)) return i - 1;
+    }
+    return null;
   }
 
   // 失焦/隱藏時呼叫：keyup 可能永遠不會到，清掉暫態避免幽靈按鍵持續移動
   clearTransient() {
     this.keys.clear();
     this._justPressed.clear();
+    this.mouseButtons.clear();
+    this._mouseJust.clear();
     this._dragging = false;
   }
 
@@ -58,6 +85,10 @@ export class Input {
       moveZ: (this.pressed('KeyS') ? 1 : 0) - (this.pressed('KeyW') ? 1 : 0),
       run: this.pressed('ShiftLeft') || this.pressed('ShiftRight'),
       interact: this.consumePressed('KeyE'),
+      fire: this.consumeMouseJust(0),
+      reload: this.consumePressed('KeyR'),
+      inventory: this.consumePressed('Tab'),
+      weaponSlot: this.consumeWeaponSlot(),
       look: this.consumeLook(),
     };
   }
@@ -68,7 +99,10 @@ export class Input {
   }
 
   attach(canvas) {
-    window.addEventListener('keydown', (e) => this.onKeyDown(e.code, e.repeat));
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Tab') e.preventDefault(); // 避免焦點跳走
+      this.onKeyDown(e.code, e.repeat);
+    });
     window.addEventListener('keyup', (e) => this.onKeyUp(e.code));
     document.addEventListener('pointerlockchange', () => {
       this.pointerLocked = document.pointerLockElement === canvas;
@@ -98,12 +132,14 @@ export class Input {
       }
     });
     canvas.addEventListener('mousedown', (e) => {
+      this.onMouseDown(e.button);
       if (this.dragMode) {
         this._dragging = true;
         this._dragLast = [e.clientX, e.clientY];
       }
     });
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
+      this.onMouseUp(e.button);
       this._dragging = false;
     });
   }
