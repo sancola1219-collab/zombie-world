@@ -19,15 +19,17 @@ import { Lurker } from './game/enemies/lurker.js';
 import { Spider } from './game/enemies/spider.js';
 import { Creeper } from './game/enemies/creeper.js';
 import { Bloater } from './game/enemies/bloater.js';
+import { Prime } from './game/enemies/prime.js';
 import { separateEnemies } from './game/enemies/base.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, prime: Prime };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
+import { CHAPTER3 } from './levels/chapter3.js';
 import { STORY1 } from './levels/story1.js';
 
-const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2 };
+const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3 };
 const PROGRESS_KEY = 'zombie-world-progress';
 import { HUD } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';
@@ -177,6 +179,8 @@ function boot() {
   let everLocked = false;
   let hintOverride = null; // {text, t}
   let difficulty = 'standard';
+  let bossDone = false;
+  let countdownLeft = -1; // >0 表示自毀倒數進行中（邏輯時鐘）
   const npcTalked = new Set(); // 已完成首次對話的 NPC
   const firedTriggers = new Set(); // 已觸發的房間事件
   const docsRead = new Set(); // 已閱讀文件（計入評價）
@@ -460,6 +464,12 @@ function boot() {
       `存活時間 ${m} 分 ${String(s).padStart(2, '0')} 秒．文件 ${docsRead.size}/${total}．難度 ${DIFFICULTY[difficulty].name}`;
     const hasNext = LEVEL.next && CHAPTERS[LEVEL.next];
     $('btn-nextchap').style.display = hasNext ? '' : 'none';
+    if (!hasNext) {
+      $('chapend-title').textContent = '全章節　完';
+      saves.remove(PROGRESS_KEY); // 通關後回到乾淨狀態
+    }
+    $('chapend-note').textContent = LEVEL.endingText || '';
+    $('countdown').style.display = 'none';
     $('chapend').style.display = 'flex';
     audio.setMusicIntensity(0);
   }
@@ -1015,6 +1025,33 @@ function boot() {
     separateEnemies(enemies);
     for (const e of enemies) {
       renderer.syncEnemy(e.id, e, activeRoomIds.includes(world.roomAt(e.x, e.z)));
+    }
+
+    // Boss 擊破 → 自毀協定啟動（緊急解鎖＋倒數）
+    if (LEVEL.boss && !bossDone) {
+      const boss = enemies.find((e) => e.id === LEVEL.boss);
+      if (boss && boss.dead) {
+        bossDone = true;
+        inventory.keyItems.push('bossdead');
+        countdownLeft = LEVEL.countdown || 180;
+        renderer.shake(0.22);
+        audio.play('explosion');
+        audio.setMusicIntensity(1);
+        hintFlash('銷毀協定啟動——豎井閘門緊急解鎖，快跑！', 4.5);
+        $('countdown').style.display = 'block';
+      }
+    }
+    if (countdownLeft > 0) {
+      countdownLeft -= dt;
+      const cm = Math.floor(Math.max(0, countdownLeft) / 60);
+      const cs = Math.floor(Math.max(0, countdownLeft) % 60);
+      $('countdown').textContent = `自毀 ${cm}:${String(cs).padStart(2, '0')}`;
+      if (countdownLeft <= 0) {
+        player.hp = 0;
+        hintFlash('熱熔銷毀系統啟動——', 2);
+        die();
+        return;
+      }
     }
 
     audio.setHeartbeat(player.healthTier());

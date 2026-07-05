@@ -427,6 +427,34 @@ export function buildBloaterMesh() {
   return g;
 }
 
+// 原體：吞噬 KY-02 後成形的聚合體巨物（2.6m）——黑色聚合體＋藍光脈絡＋外露核心
+export function buildPrimeMesh() {
+  const g = new THREE.Group();
+  const mass = mat(0x14161c);
+  const massLight = mat(0x1e2230);
+  const glow = new THREE.MeshBasicMaterial({ color: 0x55eedd });
+  const glowDim = new THREE.MeshBasicMaterial({ color: 0x2a8878 });
+
+  blob(g, mass, 0.5, 1.5, 1.0, 1.2, 0, 0.5, 0);                // 底部拖行團塊
+  blob(g, mass, 0.42, 1.3, 1.5, 1.1, 0, 1.2, 0);               // 軀幹主體
+  blob(g, massLight, 0.3, 1.2, 1.3, 1, -0.3, 1.7, 0);          // 隆起的肩
+  blob(g, massLight, 0.26, 1.1, 1.2, 1, 0.35, 1.6, 0.05);
+  blob(g, mass, 0.2, 1, 1.2, 1, 0.05, 2.1, -0.05);             // 無面孔的頭部
+  blob(g, glow, 0.13, 1, 1, 1, 0, 2.2, -0.12);                 // ★ 外露核心（弱點）
+  cap(g, mass, 0.16, 0.5, -0.55, 1.3, -0.1, 0.3, 0, 0.9);      // 巨臂
+  blob(g, massLight, 0.2, 1, 0.8, 1.4, -0.75, 0.85, -0.3);     // 巨掌
+  cap(g, mass, 0.1, 0.4, 0.5, 1.2, 0, 0.2, 0, -0.7);           // 次臂
+  // 藍光脈絡
+  for (const [x, y, z] of [[-0.2, 1.4, -0.35], [0.25, 1.1, -0.32], [0, 0.7, -0.42], [-0.4, 1.8, -0.2], [0.1, 1.75, -0.28]]) {
+    blob(g, glowDim, 0.03, 0.6, 2.2, 0.5, x, y, z);
+  }
+  // 吞入的容器殘片
+  box(g, mat(0x3d4034), 0.16, 0.22, 0.05, 0.3, 0.6, -0.4, 0.4, 0.3);
+  box(g, mat(0x3d4034), 0.14, 0.18, 0.05, -0.35, 0.4, -0.38, -0.3, 0.5);
+  g.userData.kind = 'prime';
+  return g;
+}
+
 // === 倖存者 NPC（白袍研究員，站姿，無傷） ===
 
 export function buildSurvivorMesh() {

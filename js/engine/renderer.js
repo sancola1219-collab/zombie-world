@@ -15,6 +15,7 @@ import {
   buildSpiderMesh,
   buildCreeperMesh,
   buildBloaterMesh,
+  buildPrimeMesh,
 } from './meshes.js';
 
 const ENEMY_BUILDERS = {
@@ -25,6 +26,7 @@ const ENEMY_BUILDERS = {
   spider: buildSpiderMesh,
   creeper: buildCreeperMesh,
   bloater: buildBloaterMesh,
+  prime: buildPrimeMesh,
 };
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
