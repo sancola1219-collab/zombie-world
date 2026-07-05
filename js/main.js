@@ -4,6 +4,7 @@ import { Renderer } from './engine/renderer.js';
 import { Input } from './engine/input.js';
 import { AudioEngine } from './engine/audio.js';
 import { SaveStore } from './engine/save.js';
+import { loadExternalModels } from './engine/models.js';
 import { mulberry32 } from './engine/rng.js';
 import { World } from './game/world.js';
 import { Player } from './game/player.js';
@@ -69,6 +70,10 @@ function boot() {
   }
   for (const t of LEVEL.entities.typewriters) renderer.addTypewriter(t.x, t.z);
   renderer.setWeaponView(arsenal.current);
+  // 外部 .glb 模型（assets/models/ 有檔才替換；非同步，不擋啟動）
+  loadExternalModels().then((m) => {
+    if (m) renderer.setExternalModels(m);
+  }).catch(() => {});
 
   const canvas = renderer.renderer.domElement;
   input.attach(canvas);

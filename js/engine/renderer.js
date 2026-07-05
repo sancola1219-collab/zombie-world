@@ -1,7 +1,14 @@
-// 渲染層：純視覺。遊戲狀態一律在 World/Player/Enemy，這裡只反映狀態。
+﻿// 渲染層：純視覺。遊戲狀態一律在 World/Player/Enemy，這裡只反映狀態。
 // 血粒子、槍口光衰減、拾取物旋轉屬純裝飾，在 render() 內推進不影響邏輯。
 import * as THREE from 'three';
 import { getTexture } from './textures.js';
+import {
+  buildWeaponModel,
+  buildZombieMesh,
+  buildDogMesh,
+  buildTypewriterMesh,
+  buildPickupMesh,
+} from './meshes.js';
 
 export class Renderer {
   constructor(container) {
@@ -137,9 +144,36 @@ export class Renderer {
   // === 敵人 ===
 
   addEnemy(id, type) {
-    const group = type === 'dog' ? makeDogMesh() : makeZombieMesh();
+    let group;
+    const ext = this._extModels && this._extModels.get(type);
+    if (ext) {
+      group = new THREE.Group();
+      group.add(ext.clone());
+      group.userData.kind = type;
+      group.userData.parts = null; // 外部模型不做程序擺動
+    } else {
+      group = type === 'dog' ? buildDogMesh() : buildZombieMesh();
+    }
     this.scene.add(group);
     this.enemyMeshes.set(id, group);
+  }
+
+  // 外部 .glb 模型熱替換（models.js 找到檔案時呼叫；武器與敵人一併換）
+  setExternalModels(models) {
+    this._extModels = models;
+    for (const [id, g] of Object.entries(this._vms)) {
+      const model = models.get(id);
+      if (!model) continue;
+      g.clear();
+      g.add(model.clone());
+    }
+    for (const g of this.enemyMeshes.values()) {
+      const model = models.get(g.userData.kind);
+      if (!model) continue;
+      g.clear();
+      g.add(model.clone());
+      g.userData.parts = null;
+    }
   }
 
   syncEnemy(id, e, visible = true) {
@@ -163,13 +197,7 @@ export class Renderer {
   // === 拾取物與打字機 ===
 
   addPickup(id, itemType) {
-    const color =
-      itemType === 'heal' ? 0x3f9f4f : itemType === 'weapon' ? 0x8899aa : 0xc9a94f;
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.24, 0.24, 0.24),
-      new THREE.MeshLambertMaterial({ color, emissive: color, emissiveIntensity: 0.45 })
-    );
-    mesh.position.y = 0.3;
+    const mesh = buildPickupMesh(itemType);
     this.scene.add(mesh);
     this.pickupMeshes.set(id, mesh);
   }
@@ -196,26 +224,7 @@ export class Renderer {
   }
 
   addTypewriter(x, z) {
-    const g = new THREE.Group();
-    const desk = new THREE.Mesh(
-      new THREE.BoxGeometry(0.9, 0.72, 0.55),
-      new THREE.MeshLambertMaterial({ map: getTexture('wood') })
-    );
-    desk.position.y = 0.36;
-    g.add(desk);
-    const tw = new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.2, 0.34),
-      new THREE.MeshLambertMaterial({ color: 0x22262c })
-    );
-    tw.position.y = 0.82;
-    g.add(tw);
-    const paper = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.22, 0.012),
-      new THREE.MeshLambertMaterial({ color: 0xd8d2bc })
-    );
-    paper.position.set(0, 1.0, -0.08);
-    paper.rotation.x = -0.25;
-    g.add(paper);
+    const g = buildTypewriterMesh();
     g.position.set(x, 0, z);
     this.scene.add(g);
   }
@@ -254,39 +263,12 @@ export class Renderer {
   // === 視角武器模型 ===
 
   _buildViewmodels() {
-    const dark = new THREE.MeshLambertMaterial({ color: 0x23262b });
-    const steel = new THREE.MeshLambertMaterial({ color: 0x55595f });
-    const wood = new THREE.MeshLambertMaterial({ color: 0x5a4028 });
-
-    const knife = new THREE.Group();
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.05, 0.22), steel);
-    blade.position.z = -0.14;
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, 0.1), wood);
-    knife.add(blade, handle);
-
-    const handgun = new THREE.Group();
-    const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.05, 0.24), dark);
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.13, 0.05), dark);
-    grip.position.set(0, -0.08, 0.08);
-    grip.rotation.x = 0.25;
-    handgun.add(slide, grip);
-
-    const shotgun = new THREE.Group();
-    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.55), dark);
-    const pump = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.16), wood);
-    pump.position.set(0, -0.05, -0.12);
-    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.2), wood);
-    stock.position.set(0, -0.04, 0.3);
-    shotgun.add(barrel, pump, stock);
-
-    const magnum = new THREE.Group();
-    const mbarrel = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.32), steel);
-    const mgrip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), wood);
-    mgrip.position.set(0, -0.08, 0.1);
-    mgrip.rotation.x = 0.3;
-    magnum.add(mbarrel, mgrip);
-
-    this._vms = { knife, handgun, shotgun, magnum };
+    this._vms = {
+      knife: buildWeaponModel('knife'),
+      handgun: buildWeaponModel('handgun'),
+      shotgun: buildWeaponModel('shotgun'),
+      magnum: buildWeaponModel('magnum'),
+    };
     this._vmRoot = new THREE.Group();
     this._vmRoot.position.set(0.24, -0.2, -0.45);
     for (const g of Object.values(this._vms)) {
@@ -340,7 +322,7 @@ export class Renderer {
     this._vmKick *= 0.8;
     this._vmRoot.position.z = -0.45 + this._vmKick;
     this._shake *= 0.86;
-    for (const m of this.pickupMeshes.values()) m.rotation.y += 0.02;
+    for (const m of this.pickupMeshes.values()) (m.userData.spin || m).rotation.y += 0.02;
 
     // 日光燈忽明忽暗
     for (const f of this._flickers) {
@@ -396,86 +378,6 @@ function makeWall(x1, z1, x2, z2, yBase, height, mat) {
   mesh.position.set((x1 + x2) / 2, yBase + height / 2, (z1 + z2) / 2);
   mesh.rotation.y = Math.atan2(z1 - z2, x2 - x1);
   return mesh;
-}
-
-// 人形殭屍：駝背、歪頭、一臂前伸一臂垂盪；四肢樞紐在關節處，render 內擺動
-function makeZombieMesh() {
-  const g = new THREE.Group();
-  const skin = new THREE.MeshLambertMaterial({ color: 0x8a927a });
-  const skinDark = new THREE.MeshLambertMaterial({ color: 0x6d745e });
-  const cloth = new THREE.MeshLambertMaterial({ color: 0x2f333c });
-  const clothDark = new THREE.MeshLambertMaterial({ color: 0x252932 });
-
-  const legGeoL = new THREE.BoxGeometry(0.15, 0.78, 0.18);
-  legGeoL.translate(0, -0.39, 0); // 樞紐在髖部
-  const legL = new THREE.Mesh(legGeoL, cloth);
-  legL.position.set(-0.1, 0.78, 0);
-  const legGeoR = legGeoL.clone();
-  const legR = new THREE.Mesh(legGeoR, clothDark);
-  legR.position.set(0.1, 0.78, 0.02);
-
-  const torso = new THREE.Group();
-  const chest = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.6, 0.26), cloth);
-  chest.position.y = 0.3;
-  torso.add(chest);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), skin);
-  head.position.set(0.04, 0.68, -0.05);
-  head.rotation.z = 0.28; // 歪頭
-  torso.add(head);
-  const armF = new THREE.Group(); // 前伸手臂，肩為樞紐
-  const armFMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.55), skinDark);
-  armFMesh.position.z = -0.27;
-  armF.add(armFMesh);
-  armF.position.set(-0.22, 0.5, -0.05);
-  armF.rotation.x = 0.15;
-  torso.add(armF);
-  const armD = new THREE.Group(); // 垂盪手臂
-  const armDMesh = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.5, 0.09), skin);
-  armDMesh.position.y = -0.25;
-  armD.add(armDMesh);
-  armD.position.set(0.25, 0.52, 0);
-  armD.rotation.z = 0.12;
-  torso.add(armD);
-  torso.position.y = 0.76;
-  torso.rotation.x = 0.3; // 駝背前傾
-
-  g.add(legL, legR, torso);
-  g.userData.parts = { legL, legR, armF, armD, torso };
-  g.userData.kind = 'zombie';
-  g.userData.phase = Math.random() * Math.PI * 2;
-  return g;
-}
-
-function makeDogMesh() {
-  const g = new THREE.Group();
-  const fur = new THREE.MeshLambertMaterial({ color: 0x4e3c2e });
-  const furDark = new THREE.MeshLambertMaterial({ color: 0x3a2c22 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.72), fur);
-  body.position.y = 0.44;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.18, 0.3), furDark);
-  head.position.set(0, 0.42, -0.48); // 壓低頭部，攻擊姿態
-  head.rotation.x = 0.25;
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.26), furDark);
-  tail.position.set(0, 0.5, 0.44);
-  tail.rotation.x = -0.5;
-
-  const legGeo = new THREE.BoxGeometry(0.07, 0.3, 0.07);
-  legGeo.translate(0, -0.15, 0); // 樞紐在肩/髖
-  const mk = (x, z) => {
-    const m = new THREE.Mesh(legGeo, fur);
-    m.position.set(x, 0.3, z);
-    return m;
-  };
-  const legFL = mk(-0.1, -0.26);
-  const legFR = mk(0.1, -0.26);
-  const legBL = mk(-0.1, 0.26);
-  const legBR = mk(0.1, 0.26);
-
-  g.add(body, head, tail, legFL, legFR, legBL, legBR);
-  g.userData.parts = { legFL, legFR, legBL, legBR };
-  g.userData.kind = 'dog';
-  g.userData.phase = Math.random() * Math.PI * 2;
-  return g;
 }
 
 // === 場景道具（程序生成，低多邊形） ===
