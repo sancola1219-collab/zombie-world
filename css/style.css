@@ -247,6 +247,7 @@ html, body {
 
 .menu-col button {
   pointer-events: auto;
+  touch-action: manipulation; /* 消除行動瀏覽器點擊延遲/雙擊縮放 */
   font: inherit;
   font-size: 17px;
   letter-spacing: 3px;

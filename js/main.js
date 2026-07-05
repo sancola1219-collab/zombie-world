@@ -94,7 +94,12 @@ function boot() {
   canvas.addEventListener('click', () => audio.unlock());
 
   // === 觸控裝置：顯示虛擬搖桿與按鈕，全部合成既有輸入 ===
-  const isTouchOnly = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+  // 偵測放寬：部分手機瀏覽器/WebView 的 hover/pointer 媒體查詢會誤報，
+  // 補上「有觸控點＋螢幕短邊 ≤900」的後備條件（觸控筆電因短邊>900不會誤中）
+  const isTouchOnly = !!(
+    (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) ||
+    (navigator.maxTouchPoints > 0 && Math.min(window.screen.width, window.screen.height) <= 900)
+  );
   if (isTouchOnly) {
     document.body.classList.add('touch');
     $('touch-ui').style.display = 'block';
@@ -215,6 +220,11 @@ function boot() {
 
   function beginPlay() {
     setMode('play');
+    if (isTouchOnly) {
+      // 二次保險：確保觸控介面在入局時一定可見
+      document.body.classList.add('touch');
+      $('touch-ui').style.display = 'block';
+    }
     hintFlash(LEVEL.objective || '活下去', 4.5);
     if (!input.dragMode && canvas.requestPointerLock) {
       const p = canvas.requestPointerLock();
