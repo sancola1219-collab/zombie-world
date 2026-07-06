@@ -82,6 +82,8 @@ export class Player {
   }
 
   update(dt, actions, world) {
+    this.prevX = this.x; // 移動前記錄，渲染側用 alpha 在 prev→current 間插值
+    this.prevZ = this.z;
     if (this.iframes > 0) this.iframes = Math.max(0, this.iframes - dt);
     if (this.poison > 0) {
       this.poison = Math.max(0, this.poison - dt);
