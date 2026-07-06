@@ -1,4 +1,4 @@
-// 進入點：組裝引擎與遊戲。階段二：戰鬥示範場。
+﻿// 進入點：組裝引擎與遊戲。階段二：戰鬥示範場。
 import { GameLoop } from './engine/loop.js';
 import { Renderer } from './engine/renderer.js';
 import { Input } from './engine/input.js';
@@ -215,6 +215,9 @@ function boot() {
     $('story').style.display = m === 'story' ? 'flex' : 'none';
     $('help').style.display = m === 'help' ? 'flex' : 'none';
     $('pause').style.display = m === 'paused' ? 'flex' : 'none';
+    // 觸控層（含覆蓋全螢幕的視角滑動區）只在遊戲進行中顯示，否則會攔截章末/選單按鈕點擊
+    const _tui = $('touch-ui');
+    if (_tui && isTouchOnly) _tui.style.display = m === 'play' ? 'block' : 'none';
     if (m === 'paused') {
       $('pause-tip').textContent = isTouchOnly
         ? '左下搖桿移動（推滿奔跑）．滑動畫面轉視角．右下按鈕互動'

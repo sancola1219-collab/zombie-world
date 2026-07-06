@@ -1,17 +1,57 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "zombie-world",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8123", "-c-1", "."],
-      "port": 8123
-    },
-    {
-      "name": "pivot",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8124", "-c-1", "C:/Users/凱凱/Desktop/樞紐助手"],
-      "port": 8124
-    }
-  ]
+﻿{
+    "version":  "0.0.1",
+    "configurations":  [
+                           {
+                               "name":  "zombie-world",
+                               "runtimeExecutable":  "npx",
+                               "runtimeArgs":  [
+                                                   "-y",
+                                                   "http-server",
+                                                   "-p",
+                                                   "8123",
+                                                   "-c-1",
+                                                   "."
+                                               ],
+                               "port":  8123
+                           },
+                           {
+                               "name":  "pivot",
+                               "runtimeExecutable":  "npx",
+                               "runtimeArgs":  [
+                                                   "-y",
+                                                   "http-server",
+                                                   "-p",
+                                                   "8124",
+                                                   "-c-1",
+                                                   "C:/Users/凱凱/Desktop/樞紐助手"
+                                               ],
+                               "port":  8124
+                           },
+                           {
+                               "name":  "template",
+                               "runtimeExecutable":  "npx",
+                               "runtimeArgs":  [
+                                                   "-y",
+                                                   "http-server",
+                                                   "-p",
+                                                   "8125",
+                                                   "-c-1",
+                                                   "C:/Users/凱凱/Desktop/遊戲/3D遊戲模板"
+                                               ],
+                               "port":  8125
+                           },
+                           {
+                               "name":  "dungeon",
+                               "runtimeExecutable":  "npx",
+                               "runtimeArgs":  [
+                                                   "-y",
+                                                   "http-server",
+                                                   "-p",
+                                                   "8126",
+                                                   "-c-1",
+                                                   "C:/Users/凱凱/Desktop/遊戲/地牢尋寶"
+                                               ],
+                               "port":  8126
+                           }
+                       ]
 }

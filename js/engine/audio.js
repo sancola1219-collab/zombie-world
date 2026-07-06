@@ -1,4 +1,4 @@
-// WebAudio 合成音效：零外部音檔。AudioContext 需使用者手勢後建立（unlock）。
+﻿// WebAudio 合成音效：零外部音檔。AudioContext 需使用者手勢後建立（unlock）。
 // ctx 尚未建立時所有播放都安靜跳過。心跳由 tier 驅動（fine 無、caution 慢、danger 快）。
 export class AudioEngine {
   constructor() {
@@ -31,8 +31,8 @@ export class AudioEngine {
     this._musicIntensity = Math.max(0, Math.min(1, v));
     if (this._droneGain && this.ctx) {
       const t = this.ctx.currentTime;
-      this._droneGain.gain.linearRampToValueAtTime(0.05 + this._musicIntensity * 0.05, t + 1.2);
-      this._pulseGain.gain.linearRampToValueAtTime(this._musicIntensity * 0.14, t + 0.8);
+      this._droneGain.gain.linearRampToValueAtTime(0.11 + this._musicIntensity * 0.08, t + 1.2);
+      this._pulseGain.gain.linearRampToValueAtTime(this._musicIntensity * 0.2, t + 0.8);
     }
   }
 
@@ -41,7 +41,7 @@ export class AudioEngine {
     const t = this.ctx.currentTime;
     // 層 1：雙鋸齒微失諧 drone（不和諧小二度），慢速濾波起伏
     this._droneGain = this.ctx.createGain();
-    this._droneGain.gain.value = 0.05;
+    this._droneGain.gain.value = 0.11;
     const droneFilter = this.ctx.createBiquadFilter();
     droneFilter.type = 'lowpass';
     droneFilter.frequency.value = 160;
