@@ -753,13 +753,17 @@ export class Renderer {
     this._shake *= 0.86;
     for (const m of this.pickupMeshes.values()) (m.userData.spin || m).rotation.y += 0.02;
 
-    // 日光燈忽明忽暗
+    // 燈光柔和搖曳（連續插值，非硬跳頻閃——避免刺眼與光敏不適）
     for (const f of this._flickers) {
       f.t -= dt;
       if (f.t <= 0) {
-        f.t = 0.06 + Math.random() * 0.18;
-        f.light.intensity = f.base * (Math.random() < 0.1 ? 0.12 : 0.7 + Math.random() * 0.45);
+        f.t = 0.5 + Math.random() * 0.9; // 0.5~1.4s 才換一次目標亮度
+        // 偶爾(12%)輕微變暗到 0.62 製造不安，其餘 0.85~1.0；不再全黑瞬閃
+        f.target = f.base * (Math.random() < 0.12 ? 0.62 : 0.85 + Math.random() * 0.15);
       }
+      if (f.target == null) f.target = f.base;
+      // 朝目標平滑趨近，畫面不會硬跳
+      f.light.intensity += (f.target - f.light.intensity) * Math.min(1, dt * 5);
     }
 
     // 外部骨架模型：推進動畫混合器
