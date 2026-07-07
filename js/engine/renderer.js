@@ -154,9 +154,11 @@ export class Renderer {
 
       if (room.light) {
         const L = room.light;
-        const light = new THREE.PointLight(L.color ?? 0xffd9a0, L.intensity ?? 6, 18, 1.6);
+        // distance 13（原 18）＝更集中的光圈，不再鋪滿整房；decay 1.3 讓範圍內亮度均勻、邊緣自然淡出（減少分割漸層邊界）
+        const light = new THREE.PointLight(L.color ?? 0xffd9a0, L.intensity ?? 6, 13, 1.3);
         light.position.set(L.x, L.y ?? room.h - 0.4, L.z);
         group.add(light);
+        // flicker 已停用亮度抖動（見 render()）——保留登記僅供未來調校，光維持恆定
         if (L.flicker) this._flickers.push({ light, base: light.intensity, t: 0 });
       }
 
@@ -755,17 +757,10 @@ export class Renderer {
     this._shake *= 0.86;
     for (const m of this.pickupMeshes.values()) (m.userData.spin || m).rotation.y += 0.02;
 
-    // 燈光柔和搖曳（連續插值，非硬跳頻閃——避免刺眼與光敏不適）
+    // 燈光已停用亮度抖動——維持恆定，畫面完全不閃（使用者對閃爍/光敏敏感）。
+    // 光的恐怖氛圍改由固定的暖色低強度＋集中光圈營造，不靠明暗跳動。
     for (const f of this._flickers) {
-      f.t -= dt;
-      if (f.t <= 0) {
-        f.t = 0.5 + Math.random() * 0.9; // 0.5~1.4s 才換一次目標亮度
-        // 偶爾(12%)輕微變暗到 0.62 製造不安，其餘 0.85~1.0；不再全黑瞬閃
-        f.target = f.base * (Math.random() < 0.12 ? 0.62 : 0.85 + Math.random() * 0.15);
-      }
-      if (f.target == null) f.target = f.base;
-      // 朝目標平滑趨近，畫面不會硬跳
-      f.light.intensity += (f.target - f.light.intensity) * Math.min(1, dt * 5);
+      if (f.light.intensity !== f.base) f.light.intensity = f.base;
     }
 
     // 外部骨架模型：推進動畫混合器
