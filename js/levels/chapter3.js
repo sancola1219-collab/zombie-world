@@ -5,7 +5,7 @@
 export const CHAPTER3 = {
   id: 'chapter3',
   name: '第三章：封口名單',
-  next: null, // 第四章待使用者提供劇本
+  next: 'chapter4', // 銜接第四章〈聖時爆君〉
   exitNeeds: 'dossier',
   exitHint: '空手逃出去沒有意義——白博士說得對，外面不會相信兩個事故責任人。得先拿到那份名單',
   spawn: { x: 2, z: 2, yaw: Math.PI / 2 }, // 安全梯底，面向東（往地下層）

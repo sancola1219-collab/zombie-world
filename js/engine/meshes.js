@@ -616,6 +616,112 @@ export function buildPrimeMesh() {
   return g;
 }
 
+// 聖時爆君（S-10 戰術適應體，約 2.9m）：灰黑膨脹肌肉＋青藍血管、破損戰術背心、
+// 左臂工業夾爪、右肩扛火箭筒（晨星紅白標誌）、左眼藍白火焰瞳。靜態巨大剪影（無擺動）。
+export function buildWarlordMesh() {
+  const g = new THREE.Group();
+  const flesh = mat(0x3a3d42);      // 灰黑膨脹肌肉
+  const fleshDark = mat(0x24262b);
+  const fleshMid = mat(0x2f3238);
+  const vest = mat(0x131418);       // 破損黑色戰術背心
+  const vestStrap = mat(0x0c0d10);
+  const steel = mat(0x2c2f36);      // 火箭筒金屬
+  const steelDark = mat(0x181a1f);
+  const red = mat(0xc02622);        // 晨星紅白標誌
+  const white = mat(0xd6d6d0);
+  const teeth = mat(0xcfc7b4);
+  const vein = new THREE.MeshBasicMaterial({ color: 0x4a90d9 });  // 青藍血管光
+  const eyeGlow = new THREE.MeshBasicMaterial({ color: 0xbfe0ff }); // 藍白火焰瞳
+  const eyeHuman = mat(0x1a1712);
+
+  // === 腿（粗壯膨脹） ===
+  for (const sx of [-0.26, 0.26]) {
+    const leg = new THREE.Group();
+    leg.position.set(sx, 1.28, 0);
+    cap(leg, flesh, 0.16, 0.44, 0, -0.28, 0.02, 0.04);        // 大腿
+    cap(leg, fleshMid, 0.13, 0.44, 0, -0.78, 0.03, -0.02);    // 小腿
+    blob(leg, vein, 0.03, 0.5, 2.2, 0.5, sx > 0 ? 0.1 : -0.1, -0.5, -0.1); // 血管
+    blob(leg, fleshDark, 0.11, 1.2, 0.6, 1.9, 0, -1.08, -0.05); // 巨足
+    box(leg, steelDark, 0.12, 0.14, 0.12, 0, -0.2, 0.02);     // 護膝殘片
+    g.add(leg);
+  }
+
+  // === 軀幹（巨大寬肩、破戰術背心） ===
+  const torso = new THREE.Group();
+  torso.position.y = 1.28;
+  blob(torso, flesh, 0.34, 1.7, 1.2, 1.15, 0, 0.42, 0);        // 下軀幹/腹
+  blob(torso, fleshMid, 0.4, 1.9, 1.35, 1.1, 0, 0.95, 0);      // 巨大胸膛
+  blob(torso, vein, 0.02, 1, 3.0, 0.6, -0.18, 0.9, -0.32);     // 胸口血管
+  blob(torso, vein, 0.02, 1, 2.6, 0.6, 0.2, 0.7, -0.34);
+  // 破損戰術背心（殘掛半邊）
+  box(torso, vest, 0.5, 0.7, 0.18, 0, 0.9, -0.22, 0.05);
+  box(torso, vestStrap, 0.09, 0.85, 0.06, -0.28, 0.85, -0.16, 0, 0, 0.25); // 斜背帶
+  box(torso, vest, 0.22, 0.24, 0.1, 0.24, 1.05, -0.26);       // 殘破口袋塊
+  // 寬肩（塞滿通道感）
+  blob(torso, flesh, 0.24, 1.0, 0.95, 1.0, -0.62, 1.35, 0);
+  blob(torso, flesh, 0.26, 1.0, 0.95, 1.0, 0.64, 1.35, 0);
+  cap(torso, fleshMid, 0.11, 0.14, 0, 1.5, -0.02, 0.2);        // 粗頸
+
+  // === 頭（扭曲人形、突顎尖牙、左眼藍白火焰） ===
+  const head = new THREE.Group();
+  head.position.set(0, 1.62, -0.02);
+  head.rotation.x = 0.05;
+  blob(head, flesh, 0.19, 1.0, 1.1, 1.05, 0, 0.05, 0);
+  blob(head, fleshDark, 0.12, 1.0, 0.5, 1.0, 0, 0.16, 0.02);   // 顱頂
+  blob(head, fleshMid, 0.13, 1.3, 0.7, 0.9, 0, -0.12, -0.05, 0.3); // 突出下顎
+  // 尖牙
+  for (const tx of [-0.07, -0.025, 0.025, 0.07]) {
+    cap(head, teeth, 0.014, 0.05, tx, -0.14, -0.13, Math.PI);
+  }
+  box(head, steelDark, 0.02, 0.02, 0.02, 0, 0, 0); // (占位避免空)
+  blob(head, eyeHuman, 0.03, 1.1, 1.0, 0.6, 0.07, 0.05, -0.17); // 右眼（人類殘留）
+  blob(head, eyeGlow, 0.045, 1.2, 1.1, 0.7, -0.075, 0.05, -0.17); // 左眼（藍白火焰，較大）
+  blob(head, vein, 0.02, 1, 2.0, 0.5, -0.1, 0.14, -0.12);
+  torso.add(head);
+
+  // === 左臂（工業夾爪，異常巨大） ===
+  const armL = new THREE.Group();
+  armL.position.set(-0.66, 1.3, 0);
+  armL.rotation.z = -0.15;
+  cap(armL, flesh, 0.15, 0.4, 0, -0.24, 0, 0.08);              // 巨大上臂
+  blob(armL, vein, 0.025, 0.6, 2.2, 0.6, 0.08, -0.24, -0.12);
+  cap(armL, fleshMid, 0.14, 0.42, 0, -0.68, 0.02, -0.1);       // 前臂
+  // 工業夾爪（兩片開合鉗）
+  const claw = new THREE.Group();
+  claw.position.set(0, -0.98, 0);
+  blob(claw, steelDark, 0.14, 1.0, 0.9, 1.1, 0, 0, 0);         // 夾爪基座
+  box(claw, steel, 0.08, 0.34, 0.1, -0.1, -0.2, 0, 0, 0, 0.35);  // 左鉗指
+  box(claw, steel, 0.08, 0.34, 0.1, 0.1, -0.2, 0, 0, 0, -0.35); // 右鉗指
+  cap(claw, red, 0.03, 0.12, 0, 0.06, 0, Math.PI / 2);         // 液壓管紅
+  armL.add(claw);
+  torso.add(armL);
+
+  // === 右臂（扛火箭筒） ===
+  const armR = new THREE.Group();
+  armR.position.set(0.6, 1.34, 0);
+  cap(armR, flesh, 0.14, 0.34, 0, -0.18, -0.06, 0.3);          // 上臂抬起
+  cap(armR, fleshMid, 0.12, 0.3, 0.18, -0.32, -0.28, 0.7);     // 前臂前伸握把
+  blob(armR, fleshDark, 0.09, 1, 0.8, 1.2, 0.32, -0.42, -0.4); // 手
+  // 火箭筒（扛在肩上，斜指前方）
+  const launcher = new THREE.Group();
+  launcher.position.set(0.16, 0.02, -0.18);
+  launcher.rotation.set(0.12, 0.18, 0);
+  cyl(launcher, steel, 0.11, 0.11, 1.05, 12, 0, 0, -0.2, Math.PI / 2); // 主管
+  cyl(launcher, steelDark, 0.135, 0.135, 0.12, 12, 0, 0, -0.72, Math.PI / 2); // 前口擴張
+  cyl(launcher, steelDark, 0.13, 0.13, 0.14, 12, 0, 0, 0.34, Math.PI / 2);    // 後噴口
+  box(launcher, steel, 0.05, 0.16, 0.14, 0, -0.15, 0.02);     // 握把
+  box(launcher, steelDark, 0.04, 0.1, 0.18, 0, 0.13, -0.05);  // 瞄具
+  // 晨星紅白標誌（紅底白條）
+  cyl(launcher, red, 0.113, 0.113, 0.2, 12, 0, 0, -0.35, Math.PI / 2);
+  box(launcher, white, 0.03, 0.16, 0.04, 0.1, 0, -0.35, Math.PI / 2, 0, 0);
+  armR.add(launcher);
+  torso.add(armR);
+
+  g.add(torso);
+  g.userData.kind = 'warlord'; // 不設 parts：維持巨大靜態剪影（暴君式壓迫）
+  return g;
+}
+
 // === 倖存者 NPC（白袍研究員，站姿，無傷） ===
 
 export function buildSurvivorMesh() {

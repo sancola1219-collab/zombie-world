@@ -10,6 +10,7 @@ export const ITEMS = {
   labkey: { name: '實驗區通行卡', type: 'key', desc: '生物危害等級4區域的通行卡' },
   fireext: { name: '滅火器', type: 'key', desc: '沉甸甸的鋼瓶——門禁停權時，砸開玻璃罩比刷卡快' },
   evidence: { name: 'KY 導入證據', type: 'key', desc: '林欣儀的手寫筆記——證明晨星拿工廠當培養皿的唯一憑據' },
+  liftkey: { name: '提升機釋放插銷', type: 'key', desc: '拔下它，物料平台的配重就會失控墜落——用來拖住聖時爆君、炸開往 F 區的路' },
   magnum_weapon: { name: '麥格農', type: 'weapon', weapon: 'magnum', rounds: 6 },
   handgun_ammo: { name: '手槍彈', type: 'ammo', stack: 45, weapon: 'handgun' },
   shotgun_shells: { name: '霰彈', type: 'ammo', stack: 21, weapon: 'shotgun' },

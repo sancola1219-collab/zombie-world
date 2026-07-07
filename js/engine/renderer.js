@@ -18,6 +18,7 @@ import {
   buildAgentMesh,
   buildMutantMesh,
   buildPrimeMesh,
+  buildWarlordMesh,
 } from './meshes.js';
 
 const ENEMY_BUILDERS = {
@@ -31,6 +32,7 @@ const ENEMY_BUILDERS = {
   agent: buildAgentMesh,
   mutant: buildMutantMesh,
   prime: buildPrimeMesh,
+  warlord: buildWarlordMesh,
 };
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）

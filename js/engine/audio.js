@@ -226,6 +226,12 @@ export class AudioEngine {
     this._burst({ freq: 175, vol: 0.4, dur: 0.1 });
   }
 
+  _stomp() {
+    // 聖時爆君的沉重腳步：低頻悶擊＋短促地面震動尾音
+    this._burst({ type: 'lowpass', freq: 120, vol: 0.6, dur: 0.14 });
+    this._tone({ type: 'sine', from: 70, to: 34, vol: 0.4, dur: 0.18 });
+  }
+
   _reload() {
     this._tone({ type: 'square', from: 700, vol: 0.07, dur: 0.04 });
     this._burst({ freq: 800, type: 'bandpass', vol: 0.2, dur: 0.06, when: 0.12 });

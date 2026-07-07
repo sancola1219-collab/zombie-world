@@ -22,16 +22,18 @@ import { Bloater } from './game/enemies/bloater.js';
 import { Agent } from './game/enemies/agent.js';
 import { Mutant } from './game/enemies/mutant.js';
 import { Prime } from './game/enemies/prime.js';
+import { Warlord } from './game/enemies/warlord.js';
 import { separateEnemies } from './game/enemies/base.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
 import { CHAPTER3 } from './levels/chapter3.js';
+import { CHAPTER4 } from './levels/chapter4.js';
 import { STORY1 } from './levels/story1.js';
 
-const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3 };
+const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3, chapter4: CHAPTER4 };
 const PROGRESS_KEY = 'zombie-world-progress';
 import { HUD } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';

@@ -49,5 +49,5 @@ test('第三章：晨星清除小組(agent)＋KY變異體＋觸發器獨白', ()
   assert.ok(withMono >= 3, `應有多個內心獨白觸發器，實際 ${withMono}`);
   // 伏筆結尾與待續
   assert.ok(CHAPTER3.endingText.includes('第四章') || CHAPTER3.endingText.includes('待續'));
-  assert.equal(CHAPTER3.next, null);
+  assert.equal(CHAPTER3.next, 'chapter4'); // 已銜接第四章〈聖時爆君〉
 });
