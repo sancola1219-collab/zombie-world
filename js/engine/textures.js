@@ -208,6 +208,102 @@ const GENERATORS = {
     return toTexture(c, 1);
   },
 
+  // 腐肉皮膚：亮灰底（供材質 color 染色）＋明暗雲斑＋血管網＋壞死點。
+  // 貼在怪物的膠囊/橢球件上，把塑膠感的純色變成有機斑駁的皮膚
+  flesh() {
+    const rng = mulberry32(88);
+    const c = makeCanvas();
+    const g = c.getContext('2d');
+    g.fillStyle = '#c8c4bc';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 70; i++) {
+      const x = rng() * 256;
+      const y = rng() * 256;
+      const r = 6 + rng() * 30;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const dark = rng() > 0.45;
+      grad.addColorStop(0, dark ? `rgba(64, 54, 50, ${0.1 + rng() * 0.2})` : `rgba(240, 236, 228, ${0.08 + rng() * 0.14})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (let i = 0; i < 26; i++) {
+      let x = rng() * 256;
+      let y = rng() * 256;
+      g.strokeStyle = `rgba(82, 46, 46, ${0.14 + rng() * 0.18})`;
+      g.lineWidth = 0.6 + rng() * 0.9;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let s = 0; s < 6; s++) {
+        x += (rng() - 0.5) * 36;
+        y += (rng() - 0.5) * 36;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    for (let i = 0; i < 900; i++) {
+      const v = rng();
+      g.fillStyle = v > 0.5 ? `rgba(44, 34, 30, ${0.04 + v * 0.1})` : `rgba(228, 222, 208, ${0.04 + v * 0.08})`;
+      g.fillRect(rng() * 256, rng() * 256, 1 + rng() * 2, 1 + rng() * 2);
+    }
+    return toTexture(c, 1);
+  },
+
+  // 皮膚凹凸圖（灰階雲斑＋毛孔），bumpMap 用——手電筒下皮膚有真實起伏
+  fleshbump() {
+    const rng = mulberry32(99);
+    const c = makeCanvas();
+    const g = c.getContext('2d');
+    g.fillStyle = '#808080';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 90; i++) {
+      const x = rng() * 256;
+      const y = rng() * 256;
+      const r = 4 + rng() * 22;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const hi = rng() > 0.5;
+      grad.addColorStop(0, hi ? `rgba(200, 200, 200, ${0.2 + rng() * 0.3})` : `rgba(40, 40, 40, ${0.2 + rng() * 0.3})`);
+      grad.addColorStop(1, 'rgba(128,128,128,0)');
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (let i = 0; i < 1400; i++) {
+      const v = 40 + rng() * 175;
+      g.fillStyle = `rgba(${v}, ${v}, ${v}, ${0.15 + rng() * 0.25})`;
+      g.fillRect(rng() * 256, rng() * 256, 1 + rng() * 2, 1 + rng() * 2);
+    }
+    return toTexture(c, 1);
+  },
+
+  // 破布衣料：織紋經緯線＋髒污漬——亮灰底供染色
+  rag() {
+    const rng = mulberry32(111);
+    const c = makeCanvas();
+    const g = c.getContext('2d');
+    g.fillStyle = '#c2beb6';
+    g.fillRect(0, 0, 256, 256);
+    g.lineWidth = 1;
+    for (let x = 0; x < 256; x += 3) {
+      g.strokeStyle = `rgba(70, 64, 56, ${0.08 + rng() * 0.1})`;
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke();
+    }
+    for (let y = 0; y < 256; y += 3) {
+      g.strokeStyle = `rgba(70, 64, 56, ${0.06 + rng() * 0.1})`;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke();
+    }
+    for (let i = 0; i < 30; i++) {
+      const x = rng() * 256;
+      const y = rng() * 256;
+      const r = 8 + rng() * 30;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, `rgba(38, 32, 24, ${0.08 + rng() * 0.16})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    return toTexture(c, 1);
+  },
+
   // 斑駁灰泥：噪點＋裂痕
   plaster() {
     const rng = mulberry32(44);

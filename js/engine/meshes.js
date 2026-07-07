@@ -7,6 +7,53 @@ import { getTexture } from './textures.js';
 
 const mat = (color) => new THREE.MeshLambertMaterial({ color });
 
+// === 寫實怪物材質（逐像素 Phong＋程序貼圖）===
+// 貼圖底色約 0.77 灰，會把材質色壓暗——×1.3 補償回原亮度，builder 內色票不用改。
+// dithering 消除暗部色階斷層；bumpMap 讓手電筒下的皮膚有真實起伏。
+
+// 腐肉皮膚：斑駁腐塊＋血管網＋微濕反光
+const fleshMat = (color) =>
+  new THREE.MeshPhongMaterial({
+    color: new THREE.Color(color).multiplyScalar(1.3),
+    map: getTexture('flesh'),
+    bumpMap: getTexture('fleshbump'),
+    bumpScale: 0.25,
+    specular: 0x1e1a18,
+    shininess: 12,
+    dithering: true,
+  });
+
+// 濕潤組織：外露肌肉/傷口/膿瘤——高光強＝濕黏感
+const wetMat = (color) =>
+  new THREE.MeshPhongMaterial({
+    color: new THREE.Color(color).multiplyScalar(1.3),
+    map: getTexture('flesh'),
+    bumpMap: getTexture('fleshbump'),
+    bumpScale: 0.35,
+    specular: 0x66524a,
+    shininess: 44,
+    dithering: true,
+  });
+
+// 破布衣物：織紋＋髒污
+const ragMat = (color) =>
+  new THREE.MeshLambertMaterial({
+    color: new THREE.Color(color).multiplyScalar(1.3),
+    map: getTexture('rag'),
+    dithering: true,
+  });
+
+// 甲殼/聚合體：硬質油亮表面（蛛殼、原體）
+const sheenMat = (color, spec = 0x3a3f46, shin = 55) =>
+  new THREE.MeshPhongMaterial({
+    color,
+    bumpMap: getTexture('fleshbump'),
+    bumpScale: 0.12,
+    specular: spec,
+    shininess: shin,
+    dithering: true,
+  });
+
 function box(parent, material, w, h, d, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
   m.position.set(x, y, z);
@@ -146,14 +193,14 @@ export function buildWeaponModel(id) {
 
 export function buildZombieMesh() {
   const g = new THREE.Group();
-  const skin = mat(0x93987f);
-  const skinShade = mat(0x767c66);
-  const rot = mat(0x565c48);
+  const skin = fleshMat(0x93987f);
+  const skinShade = fleshMat(0x767c66);
+  const rot = wetMat(0x565c48);
   const bone = mat(0xcfc9b8);
-  const blood = mat(0x3c0d0d);
-  const shirt = mat(0x3b4350);
-  const shirtDark = mat(0x303844);
-  const pants = mat(0x2f2b27);
+  const blood = wetMat(0x3c0d0d);
+  const shirt = ragMat(0x3b4350);
+  const shirtDark = ragMat(0x303844);
+  const pants = ragMat(0x2f2b27);
   const eyeDark = mat(0x121216);
   const hair = mat(0x2a2620);
 
@@ -267,9 +314,9 @@ export function buildZombieMesh() {
 
 export function buildDogMesh() {
   const g = new THREE.Group();
-  const fur = mat(0x4e3c2e);
-  const furDark = mat(0x382b20);
-  const blood = mat(0x481010);
+  const fur = fleshMat(0x4e3c2e); // 疥癬斑駁的皮毛
+  const furDark = fleshMat(0x382b20);
+  const blood = wetMat(0x481010);
 
   box(g, fur, 0.26, 0.3, 0.42, 0, 0.5, -0.1);                 // 前軀
   box(g, furDark, 0.22, 0.26, 0.34, 0, 0.48, 0.24);           // 後軀
@@ -319,13 +366,14 @@ export function buildDogMesh() {
 // 獵痕者：蛙型獵殺生物——蹲伏、大腿粗壯、前爪
 export function buildHunterMesh() {
   const g = new THREE.Group();
-  const hide = mat(0x4a6a3c);
-  const hideDark = mat(0x38512c);
+  const hide = fleshMat(0x4a6a3c);
+  const hideDark = fleshMat(0x38512c);
   const claw = mat(0xd8d2b8);
+  const eyeShine = new THREE.MeshBasicMaterial({ color: 0x9a8428 }); // 黑暗中反光的獸瞳
   blob(g, hide, 0.16, 1.4, 1.1, 1.5, 0, 0.72, 0.05, 0.5);      // 前傾軀幹
   blob(g, hideDark, 0.1, 1.2, 1, 1.1, 0, 1.15, -0.18);          // 頭
-  blob(g, mat(0xc7b23a), 0.02, 1.4, 1, 0.6, -0.05, 1.18, -0.27); // 黃眼
-  blob(g, mat(0xc7b23a), 0.02, 1.4, 1, 0.6, 0.05, 1.18, -0.27);
+  blob(g, eyeShine, 0.02, 1.4, 1, 0.6, -0.05, 1.18, -0.27); // 黃眼
+  blob(g, eyeShine, 0.02, 1.4, 1, 0.6, 0.05, 1.18, -0.27);
   cap(g, hide, 0.09, 0.3, -0.24, 0.45, 0.12, 0.7);              // 蹲伏大腿
   cap(g, hide, 0.09, 0.3, 0.24, 0.45, 0.12, 0.7);
   cap(g, hideDark, 0.05, 0.28, -0.26, 0.2, -0.08, 1.5);         // 小腿前折
@@ -344,13 +392,13 @@ export function buildHunterMesh() {
 // 潛伏者：無皮爬行者——低伏、外露肌理、長舌
 export function buildLurkerMesh() {
   const g = new THREE.Group();
-  const flesh = mat(0x8a3028);
-  const fleshDark = mat(0x5e1e18);
+  const flesh = wetMat(0x8a3028);      // 無皮＝濕亮的外露肌肉
+  const fleshDark = wetMat(0x5e1e18);
   const bone = mat(0xcfc9b8);
   blob(g, flesh, 0.14, 1.9, 0.85, 1.3, 0, 0.42, 0.05);          // 低伏軀幹
   blob(g, fleshDark, 0.09, 1, 0.9, 1.1, 0, 0.5, -0.3);          // 頭
-  blob(g, mat(0xd8b0b0), 0.06, 1.2, 0.7, 1, 0, 0.62, -0.28);    // 外露腦
-  cap(g, mat(0xb05a6a), 0.018, 0.5, 0, 0.42, -0.62, 1.35);      // 垂出的長舌
+  blob(g, wetMat(0xd8b0b0), 0.06, 1.2, 0.7, 1, 0, 0.62, -0.28);    // 外露腦
+  cap(g, wetMat(0xb05a6a), 0.018, 0.5, 0, 0.42, -0.62, 1.35);      // 垂出的長舌
   for (const [sx, sz] of [[-0.22, -0.15], [0.22, -0.15], [-0.2, 0.28], [0.2, 0.28]]) {
     cap(g, flesh, 0.045, 0.3, sx, 0.28, sz, 0.3, 0, sx > 0 ? -0.9 : 0.9); // 攤開的四肢
     blob(g, bone, 0.02, 1, 0.6, 1.4, sx * 1.5, 0.08, sz);       // 爪端
@@ -362,13 +410,14 @@ export function buildLurkerMesh() {
 // 巨蛛：腹部渾圓、八足、多眼
 export function buildSpiderMesh() {
   const g = new THREE.Group();
-  const chitin = mat(0x2e2620);
-  const chitinDark = mat(0x1e1814);
+  const chitin = sheenMat(0x2e2620);   // 油亮甲殼
+  const chitinDark = sheenMat(0x1e1814);
   blob(g, chitin, 0.3, 1.1, 0.9, 1.25, 0, 0.5, 0.28);           // 腹
-  blob(g, mat(0x4a3626), 0.06, 1, 0.7, 2.2, 0, 0.72, 0.28);     // 腹紋
+  blob(g, fleshMat(0x4a3626), 0.06, 1, 0.7, 2.2, 0, 0.72, 0.28);     // 腹紋
   blob(g, chitinDark, 0.16, 1.1, 0.8, 1, 0, 0.42, -0.22);       // 頭胸
+  const eyeShine = new THREE.MeshBasicMaterial({ color: 0x8a1010 }); // 黑暗中發亮的眼列
   for (let i = 0; i < 4; i++) {
-    blob(g, mat(0x8a1010), 0.016, 1, 1, 0.6, -0.09 + i * 0.06, 0.5, -0.36); // 眼列
+    blob(g, eyeShine, 0.016, 1, 1, 0.6, -0.09 + i * 0.06, 0.5, -0.36); // 眼列
   }
   cap(g, chitinDark, 0.02, 0.14, -0.06, 0.3, -0.4, 1.1);        // 螯肢
   cap(g, chitinDark, 0.02, 0.14, 0.06, 0.3, -0.4, 1.1);
@@ -386,10 +435,10 @@ export function buildSpiderMesh() {
 // 蔓噬花：食人巨花——根丘、莖、花苞頭、外翻花瓣、觸蔓
 export function buildCreeperMesh() {
   const g = new THREE.Group();
-  const vine = mat(0x3c5a2e);
-  const vineDark = mat(0x2a4020);
-  const petal = mat(0x7a2848);
-  const maw = mat(0x481018);
+  const vine = fleshMat(0x3c5a2e);
+  const vineDark = fleshMat(0x2a4020);
+  const petal = fleshMat(0x7a2848);
+  const maw = wetMat(0x481018);       // 濕亮的口腔
   blob(g, vineDark, 0.4, 1.3, 0.5, 1.3, 0, 0.16, 0);            // 根丘
   cyl(g, vine, 0.1, 0.16, 0.9, 8, 0, 0.7, 0);                   // 主莖
   blob(g, maw, 0.22, 1, 1.15, 1, 0, 1.45, 0);                   // 花苞頭（口）
@@ -408,10 +457,10 @@ export function buildCreeperMesh() {
 // 脹屍：鼓脹欲裂的軀體、病變膿瘤
 export function buildBloaterMesh() {
   const g = new THREE.Group();
-  const skin = mat(0x7a8060);
-  const bloat = mat(0x8a9058);
-  const tumor = mat(0xa8b040);
-  const dark = mat(0x50563c);
+  const skin = fleshMat(0x7a8060);
+  const bloat = fleshMat(0x8a9058);
+  const tumor = wetMat(0xa8b040);     // 繃緊發亮的膿瘤
+  const dark = fleshMat(0x50563c);
   cap(g, dark, 0.09, 0.35, -0.12, 0.4, 0, 0, 0, -0.1);          // 短腿
   cap(g, dark, 0.09, 0.35, 0.12, 0.4, 0, 0, 0, 0.1);
   blob(g, bloat, 0.34, 1.15, 1.2, 1.05, 0, 0.95, 0);            // 鼓脹軀體
@@ -430,11 +479,11 @@ export function buildBloaterMesh() {
 // 晨星清除小組（1.78m）：黑西裝/防護裝、墨鏡、持手槍前伸的射擊姿態
 export function buildAgentMesh() {
   const g = new THREE.Group();
-  const suit = mat(0x191b22);
-  const suitLight = mat(0x262a33);
-  const skin = mat(0xc4b4a0);
+  const suit = ragMat(0x191b22);
+  const suitLight = ragMat(0x262a33);
+  const skin = fleshMat(0xc4b4a0);
   const shade = mat(0x0a0a0e);
-  const steel = mat(0x33363c);
+  const steel = sheenMat(0x33363c, 0x50565e, 35);
 
   // 腿（西裝褲）
   const legL = new THREE.Group();
@@ -502,13 +551,13 @@ export function buildAgentMesh() {
 // 皮膚裂縫滲出 KY 藍光、歪頭血口、針孔瞳。感染早期的駭人，不是腐爛的殭屍。
 export function buildMutantMesh() {
   const g = new THREE.Group();
-  const skin = mat(0xb8a488);        // 病態蒼白膚
-  const skinShade = mat(0x9a8670);
-  const necro = mat(0x2a1c22);       // 黑紫壞死
-  const necroMid = mat(0x4a2c34);
-  const cloth = mat(0x3b4550);       // 撕裂工作服（灰藍）
-  const clothDark = mat(0x2c333c);
-  const blood = mat(0x4a0d0d);
+  const skin = fleshMat(0xb8a488);        // 病態蒼白膚
+  const skinShade = fleshMat(0x9a8670);
+  const necro = wetMat(0x2a1c22);       // 黑紫壞死（濕亮）
+  const necroMid = wetMat(0x4a2c34);
+  const cloth = ragMat(0x3b4550);       // 撕裂工作服（灰藍）
+  const clothDark = ragMat(0x2c333c);
+  const blood = wetMat(0x4a0d0d);
   const glow = new THREE.MeshBasicMaterial({ color: 0x4ad9c4 }); // KY 藍綠光裂縫
   const eye = mat(0x0c0c10);
 
@@ -591,8 +640,8 @@ export function buildMutantMesh() {
 // 原體：吞噬 KY-02 後成形的聚合體巨物（2.6m）——黑色聚合體＋藍光脈絡＋外露核心
 export function buildPrimeMesh() {
   const g = new THREE.Group();
-  const mass = mat(0x14161c);
-  const massLight = mat(0x1e2230);
+  const mass = sheenMat(0x14161c, 0x3a4656, 70);      // 油亮的黑色聚合體
+  const massLight = sheenMat(0x1e2230, 0x3a4656, 70);
   const glow = new THREE.MeshBasicMaterial({ color: 0x55eedd });
   const glowDim = new THREE.MeshBasicMaterial({ color: 0x2a8878 });
 
@@ -620,13 +669,13 @@ export function buildPrimeMesh() {
 // 左臂工業夾爪、右肩扛火箭筒（晨星紅白標誌）、左眼藍白火焰瞳。靜態巨大剪影（無擺動）。
 export function buildWarlordMesh() {
   const g = new THREE.Group();
-  const flesh = mat(0x3a3d42);      // 灰黑膨脹肌肉
-  const fleshDark = mat(0x24262b);
-  const fleshMid = mat(0x2f3238);
-  const vest = mat(0x131418);       // 破損黑色戰術背心
-  const vestStrap = mat(0x0c0d10);
-  const steel = mat(0x2c2f36);      // 火箭筒金屬
-  const steelDark = mat(0x181a1f);
+  const flesh = fleshMat(0x3a3d42);      // 灰黑膨脹肌肉
+  const fleshDark = fleshMat(0x24262b);
+  const fleshMid = fleshMat(0x2f3238);
+  const vest = ragMat(0x131418);       // 破損黑色戰術背心
+  const vestStrap = ragMat(0x0c0d10);
+  const steel = sheenMat(0x2c2f36, 0x50565e, 35);      // 火箭筒金屬
+  const steelDark = sheenMat(0x181a1f, 0x40464e, 35);
   const red = mat(0xc02622);        // 晨星紅白標誌
   const white = mat(0xd6d6d0);
   const teeth = mat(0xcfc7b4);
@@ -726,10 +775,10 @@ export function buildWarlordMesh() {
 
 export function buildSurvivorMesh() {
   const g = new THREE.Group();
-  const skin = mat(0xd8b89a);
-  const coat = mat(0xd8d8d4);
-  const coatShade = mat(0xc2c2bc);
-  const pants = mat(0x3a3e48);
+  const skin = fleshMat(0xd8b89a);
+  const coat = ragMat(0xd8d8d4);
+  const coatShade = ragMat(0xc2c2bc);
+  const pants = ragMat(0x3a3e48);
   const hair = mat(0x2a2018);
 
   cap(g, pants, 0.06, 0.3, -0.1, 0.55, 0);                    // 雙腿

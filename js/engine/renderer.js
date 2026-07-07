@@ -128,11 +128,13 @@ export class Renderer {
   buildLevel(world) {
     for (const room of world.rooms.values()) {
       const group = new THREE.Group();
-      // Phong＝逐像素光照：大面積地板/牆只有 4 頂點，用 Lambert（逐頂點）會沿三角形邊界
-      // 裂成塊狀「破碎」；Phong 每像素計算光照，大平面也完全平滑。shininess/specular 0＝霧面無高光斑
-      const floorMat = new THREE.MeshPhongMaterial({ map: getTexture(room.floor || 'wood'), shininess: 0, specular: 0x000000 });
-      const wallMat = new THREE.MeshPhongMaterial({ map: getTexture(room.walls || 'wallpaper'), shininess: 0, specular: 0x000000 });
-      const ceilMat = new THREE.MeshPhongMaterial({ map: getTexture('plaster'), color: 0x777470, shininess: 0, specular: 0x000000 });
+      // Phong＝逐像素光照（大平面平滑）；dithering＝消除暗部光暈的 8-bit 色階同心圓斷層。
+      // shininess/specular 0＝霧面無高光斑
+      const floorMat = new THREE.MeshPhongMaterial({ map: getTexture(room.floor || 'wood'), shininess: 0, specular: 0x000000, dithering: true });
+      const wallMat = new THREE.MeshPhongMaterial({ map: getTexture(room.walls || 'wallpaper'), shininess: 0, specular: 0x000000, dithering: true });
+      const ceilMat = new THREE.MeshPhongMaterial({ map: getTexture('plaster'), color: 0x777470, shininess: 0, specular: 0x000000, dithering: true });
+      const cx = room.x + room.w / 2;
+      const cz = room.z + room.d / 2;
 
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.d), floorMat);
       floor.rotation.x = -Math.PI / 2;
@@ -145,12 +147,12 @@ export class Renderer {
       group.add(ceil);
 
       for (const [x1, z1, x2, z2] of world.wallSegments(room.id)) {
-        group.add(makeWall(x1, z1, x2, z2, 0, room.h, wallMat));
+        group.add(makeWall(x1, z1, x2, z2, 0, room.h, wallMat, cx, cz));
       }
       for (const d of world.doorsOfRoom(room.id)) {
         if (d.height < room.h) {
           const s = world.doorSegment(d.id);
-          group.add(makeWall(s[0], s[1], s[2], s[3], d.height, room.h - d.height, wallMat));
+          group.add(makeWall(s[0], s[1], s[2], s[3], d.height, room.h - d.height, wallMat, cx, cz));
         }
       }
 
@@ -176,7 +178,7 @@ export class Renderer {
       (this.roomGroups.get(p.room) || this.scene).add(mesh);
     }
 
-    const doorMat = new THREE.MeshPhongMaterial({ map: getTexture('wood'), color: 0x9a7a55, shininess: 0, specular: 0x000000 });
+    const doorMat = new THREE.MeshPhongMaterial({ map: getTexture('wood'), color: 0x9a7a55, shininess: 0, specular: 0x000000, dithering: true });
     for (const d of world.doors.values()) {
       const s = world.doorSegment(d.id);
       const pivot = new THREE.Group();
@@ -832,10 +834,22 @@ function normalizeStatic(obj, targetMax = null, targetHeight = null) {
   return obj;
 }
 
-function makeWall(x1, z1, x2, z2, yBase, height, mat) {
+function makeWall(x1, z1, x2, z2, yBase, height, mat, cx, cz) {
   const len = Math.hypot(x2 - x1, z2 - z1);
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, height, 0.12), mat);
-  mesh.position.set((x1 + x2) / 2, yBase + height / 2, (z1 + z2) / 2);
+  let px = (x1 + x2) / 2;
+  let pz = (z1 + z2) / 2;
+  // 相鄰兩房共用同一條邊界時，各自的牆若都以邊線為中心會完全共面重疊，
+  // 產生 z-fighting 閃爍破碎。把牆體往自己房間內側推半個厚度（+1mm 保險），
+  // 兩房的牆從此各在邊線一側、互不重疊
+  if (cx !== undefined && len > 1e-6) {
+    const nx = -(z2 - z1) / len;
+    const nz = (x2 - x1) / len;
+    const side = Math.sign(nx * (cx - px) + nz * (cz - pz)) || 1;
+    px += nx * side * 0.061;
+    pz += nz * side * 0.061;
+  }
+  mesh.position.set(px, yBase + height / 2, pz);
   mesh.rotation.y = Math.atan2(z1 - z2, x2 - x1);
   return mesh;
 }
@@ -844,8 +858,8 @@ function makeWall(x1, z1, x2, z2, yBase, height, mat) {
 
 function makeProp(p) {
   const rng = mulberry32Like(p.x * 73 + p.z * 131 + 7);
-  const wood = () => new THREE.MeshLambertMaterial({ map: getTexture('wood') });
-  const metal = () => new THREE.MeshLambertMaterial({ map: getTexture('metal') });
+  const wood = () => new THREE.MeshLambertMaterial({ map: getTexture('wood'), dithering: true });
+  const metal = () => new THREE.MeshLambertMaterial({ map: getTexture('metal'), dithering: true });
   const g = new THREE.Group();
 
   switch (p.type) {

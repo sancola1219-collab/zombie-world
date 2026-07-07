@@ -45,5 +45,6 @@ tests/       node:test 單元測試（*.test.js）
 ## 已知陷阱（都吃過虧）
 
 - 開發機瀏覽器常隱藏：rAF 停、`setInterval` 節流到 1Hz、載入時容器與 `innerWidth` 全為 0、截圖逾時。對策已內建：`GameLoop.start()` 依 `document.hidden` 選驅動器、`ResizeObserver` 跟尺寸、`renderer.resize` 拒絕 0 值——不要移除這些防護
+- **共用牆 z-fighting**（v3.5.0 根治）：相鄰兩房各自沿共用邊生成牆，若都以邊線為中心會完全共面→畫面閃爍破碎（「光線破碎」的真兇，換逐像素光照治不了）。`renderer.makeWall` 現把牆體往自己房間內側推 0.061——改牆生成邏輯必須保留這個內縮
 - Pointer Lock：Esc 退出後約 1.25 秒內重新上鎖必失敗。`pointerlockerror` 要連續 3 次才降級拖曳模式；`requestPointerLock()` 的 Promise 要 catch；暫停中按的 Esc 要 consume 掉再恢復
 - UI 面板（物品欄等）全鍵盤導航，不依賴滑鼠點擊（pointer lock 之下沒有游標）
