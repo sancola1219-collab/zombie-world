@@ -89,7 +89,7 @@ export class Renderer {
     // 手電筒：decay=0 零距離衰減——光圈內亮度恆定（電影式而非物理式）。
     // 物理衰減會讓近身敵人吃到十幾倍光強直接爆白（v2.5.2 的雪人 bug），
     // 遠處變暗交給霧與聚光角度衰減即可
-    this._flash = new THREE.SpotLight(0xfff0d2, 16, 18, 0.55, 0.6, 0);
+    this._flash = new THREE.SpotLight(0xfff0d2, 11, 18, 0.55, 0.6, 0); // 放暗：16→11（使用者要求整體壓暗）
     this._flash.position.set(0.12, -0.08, 0);
     this._flashTarget = new THREE.Object3D();
     this._flashTarget.position.set(0, -0.1, -6);
@@ -128,9 +128,11 @@ export class Renderer {
   buildLevel(world) {
     for (const room of world.rooms.values()) {
       const group = new THREE.Group();
-      const floorMat = new THREE.MeshLambertMaterial({ map: getTexture(room.floor || 'wood') });
-      const wallMat = new THREE.MeshLambertMaterial({ map: getTexture(room.walls || 'wallpaper') });
-      const ceilMat = new THREE.MeshLambertMaterial({ map: getTexture('plaster'), color: 0x777470 });
+      // Phong＝逐像素光照：大面積地板/牆只有 4 頂點，用 Lambert（逐頂點）會沿三角形邊界
+      // 裂成塊狀「破碎」；Phong 每像素計算光照，大平面也完全平滑。shininess/specular 0＝霧面無高光斑
+      const floorMat = new THREE.MeshPhongMaterial({ map: getTexture(room.floor || 'wood'), shininess: 0, specular: 0x000000 });
+      const wallMat = new THREE.MeshPhongMaterial({ map: getTexture(room.walls || 'wallpaper'), shininess: 0, specular: 0x000000 });
+      const ceilMat = new THREE.MeshPhongMaterial({ map: getTexture('plaster'), color: 0x777470, shininess: 0, specular: 0x000000 });
 
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.d), floorMat);
       floor.rotation.x = -Math.PI / 2;
@@ -154,8 +156,9 @@ export class Renderer {
 
       if (room.light) {
         const L = room.light;
-        // distance 13（原 18）＝更集中的光圈，不再鋪滿整房；decay 1.3 讓範圍內亮度均勻、邊緣自然淡出（減少分割漸層邊界）
-        const light = new THREE.PointLight(L.color ?? 0xffd9a0, L.intensity ?? 6, 13, 1.3);
+        // distance 13（原 18）＝更集中的光圈，不再鋪滿整房；decay 1.3 讓範圍內亮度均勻、邊緣自然淡出。
+        // ×0.7 整體壓暗（使用者要求）。破碎的根治在材質改 Phong 逐像素光照，放暗只是輔助降對比
+        const light = new THREE.PointLight(L.color ?? 0xffd9a0, (L.intensity ?? 6) * 0.7, 13, 1.3);
         light.position.set(L.x, L.y ?? room.h - 0.4, L.z);
         group.add(light);
         // flicker 已停用亮度抖動（見 render()）——保留登記僅供未來調校，光維持恆定
@@ -173,7 +176,7 @@ export class Renderer {
       (this.roomGroups.get(p.room) || this.scene).add(mesh);
     }
 
-    const doorMat = new THREE.MeshLambertMaterial({ map: getTexture('wood'), color: 0x9a7a55 });
+    const doorMat = new THREE.MeshPhongMaterial({ map: getTexture('wood'), color: 0x9a7a55, shininess: 0, specular: 0x000000 });
     for (const d of world.doors.values()) {
       const s = world.doorSegment(d.id);
       const pivot = new THREE.Group();
