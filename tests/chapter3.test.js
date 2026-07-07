@@ -3,10 +3,8 @@ import assert from 'node:assert/strict';
 import { World } from '../js/game/world.js';
 import { CHAPTER3 } from '../js/levels/chapter3.js';
 import { ITEMS } from '../js/game/items.js';
-import { Prime } from '../js/game/enemies/prime.js';
-import { mulberry32 } from '../js/engine/rng.js';
 
-test('第三章：門/實體/文件位置全部合法', () => {
+test('第三章〈封口名單〉：門/實體/文件位置全部合法', () => {
   const w = new World(CHAPTER3);
   const ids = new Set(CHAPTER3.rooms.map((r) => r.id));
   for (const d of CHAPTER3.doors) {
@@ -18,60 +16,38 @@ test('第三章：門/實體/文件位置全部合法', () => {
     ...CHAPTER3.entities.enemies,
     ...CHAPTER3.entities.typewriters,
     ...CHAPTER3.documents,
+    ...CHAPTER3.npcs,
   ];
   for (const e of all) {
     assert.ok(w.roomAt(e.x, e.z) !== null, `${e.id} (${e.x},${e.z}) 不在房間內`);
   }
-  for (const p of CHAPTER3.entities.pickups) assert.ok(ITEMS[p.item], `未定義 ${p.item}`);
+  for (const p of CHAPTER3.entities.pickups) assert.ok(ITEMS[p.item], `未定義道具 ${p.item}`);
 });
 
-test('第三章：Boss 擊破前豎井不可達、擊破解鎖後可達', () => {
+test('第三章推進鏈：風險名單(dossier)在可達區、出口需名單', () => {
   const w = new World(CHAPTER3);
-  const before = w.reachableRooms('gate');
-  for (const r of ['speclab', 'controlroom', 'corelab', 'vault', 'coolant', 'annex']) {
-    assert.ok(before.has(r), `開局應可達 ${r}`);
-  }
-  assert.ok(!before.has('shaft'), 'Boss 前不應可達豎井');
-  w.doors.get('d3-core-shaft').lock = null;
-  assert.ok(w.reachableRooms('gate').has('shaft'));
-  // Boss 與火箭炮都在可達區
-  const boss = CHAPTER3.entities.enemies.find((e) => e.type === 'prime');
-  assert.ok(before.has(w.roomAt(boss.x, boss.z)));
-  const rocket = CHAPTER3.entities.pickups.find((p) => p.item === 'rocket_weapon');
-  assert.ok(before.has(w.roomAt(rocket.x, rocket.z)));
+  const spawnRoom = w.roomAt(CHAPTER3.spawn.x, CHAPTER3.spawn.z);
+  const reach = w.reachableRooms(spawnRoom);
+  // 名單文件（grantsKey dossier）必須在可達區
+  const dossierDoc = CHAPTER3.documents.find((d) => d.grantsKey === 'dossier');
+  assert.ok(dossierDoc, '應有授予 dossier 的名單文件');
+  assert.ok(reach.has(w.roomAt(dossierDoc.x, dossierDoc.z)), '風險名單必須在可達區');
+  // 出口需 dossier
+  const exit = CHAPTER3.doors.find((d) => d.lock === 'chapterExit');
+  assert.ok(exit && exit.to === null && exit.from === 'wasteway');
+  assert.equal(CHAPTER3.exitNeeds, 'dossier');
+  // 全區連通
+  const all = w.reachableRooms(spawnRoom, { ignoreLocks: true });
+  for (const r of CHAPTER3.rooms) assert.ok(all.has(r.id), `房間 ${r.id} 與世界不連通`);
 });
 
-test('原體：階段轉換、重擊才硬直、衝撞與酸液', () => {
-  const ROOM = { id: 't', rooms: [{ id: 'r', x: 0, z: 0, w: 30, d: 30, h: 5 }], doors: [] };
-  const hits = [];
-  const poisons = [];
-  const ctx = {
-    player: { x: 15, z: 20 },
-    world: new World(ROOM),
-    rng: mulberry32(1),
-    gameTime: 0,
-    attackPlayer: (d) => hits.push(d),
-    sound() {},
-    poison: (s) => poisons.push(s),
-  };
-  const p = new Prime({ id: 'p', x: 15, z: 10 });
-  // 輕傷不硬直
-  p.hurt(50, 'body');
-  assert.notEqual(p.state, 'stagger');
-  // 半血 → 第二階段
-  p.hp = 460;
-  p.hurt(20, 'body');
-  assert.equal(p.phase, 2);
-  assert.equal(p.state, 'roar');
-  assert.ok(p.speed > 2);
-  // 第二階段酸液：近~9m 內、冷卻歸零 → spit → 傷害+中毒
-  for (let i = 0; i < 90; i++) p.update(1 / 60, ctx); // roar 1.2s + chase
-  p._acidCd = 0;
-  ctx.player.x = 15;
-  ctx.player.z = p.z - 6;
-  for (let i = 0; i < 200 && poisons.length === 0; i++) p.update(1 / 60, ctx);
-  assert.ok(poisons.length >= 1, '第二階段應噴酸使玩家中毒');
-  // 死亡
-  p.hurt(9999, 'head');
-  assert.ok(p.dead);
+test('第三章：晨星清除小組(agent)＋KY變異體＋觸發器獨白', () => {
+  const agents = CHAPTER3.entities.enemies.filter((e) => e.type === 'agent').length;
+  assert.ok(agents >= 3, `應有多名黑衣人清除小組，實際 ${agents}`);
+  assert.ok(CHAPTER3.entities.enemies.some((e) => e.type === 'mutant'), '應有 KY 變異體追進地下層');
+  const withMono = CHAPTER3.triggers.filter((t) => t.monologue).length;
+  assert.ok(withMono >= 3, `應有多個內心獨白觸發器，實際 ${withMono}`);
+  // 伏筆結尾與待續
+  assert.ok(CHAPTER3.endingText.includes('第四章') || CHAPTER3.endingText.includes('待續'));
+  assert.equal(CHAPTER3.next, null);
 });

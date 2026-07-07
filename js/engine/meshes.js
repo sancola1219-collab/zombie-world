@@ -427,6 +427,77 @@ export function buildBloaterMesh() {
   return g;
 }
 
+// 晨星清除小組（1.78m）：黑西裝/防護裝、墨鏡、持手槍前伸的射擊姿態
+export function buildAgentMesh() {
+  const g = new THREE.Group();
+  const suit = mat(0x191b22);
+  const suitLight = mat(0x262a33);
+  const skin = mat(0xc4b4a0);
+  const shade = mat(0x0a0a0e);
+  const steel = mat(0x33363c);
+
+  // 腿（西裝褲）
+  const legL = new THREE.Group();
+  legL.position.set(-0.11, 0.88, 0);
+  cap(legL, suit, 0.062, 0.28, 0, -0.17, 0, -0.03);
+  cap(legL, suit, 0.052, 0.28, 0, -0.56, 0.02, 0.05);
+  blob(legL, shade, 0.05, 1.1, 0.5, 2.0, 0, -0.82, -0.04); // 皮鞋
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.11, 0.88, 0);
+  cap(legR, suit, 0.062, 0.28, 0, -0.17, 0, -0.03);
+  cap(legR, suit, 0.052, 0.28, 0, -0.56, 0.02, 0.05);
+  blob(legR, shade, 0.05, 1.1, 0.5, 2.0, 0, -0.82, -0.04);
+  g.add(legR);
+
+  // 軀幹（挺直的西裝外套）
+  const torso = new THREE.Group();
+  torso.position.y = 0.86;
+  torso.rotation.x = 0.04;
+  blob(torso, suit, 0.1, 1.6, 1.0, 1.1, 0, 0.05, 0);
+  blob(torso, suit, 0.12, 1.55, 1.5, 1.1, 0, 0.5, 0);
+  box(torso, shade, 0.04, 0.5, 0.11, 0, 0.4, -0.11);       // 領帶/拉鍊
+  blob(torso, suitLight, 0.07, 1, 0.85, 1, -0.23, 0.62, 0); // 肩
+  blob(torso, suitLight, 0.07, 1, 0.85, 1, 0.23, 0.62, 0);
+  cap(torso, skin, 0.045, 0.05, 0, 0.72, -0.02, 0.15);      // 頸
+
+  // 頭（蒼白、墨鏡）
+  const head = new THREE.Group();
+  head.position.set(0, 0.8, -0.03);
+  blob(head, skin, 0.092, 1.0, 1.15, 1.02, 0, 0.05, 0);
+  blob(head, mat(0x14140f), 0.08, 1.0, 0.4, 1.0, 0, 0.14, 0.01); // 短髮
+  box(head, shade, 0.14, 0.035, 0.02, 0, 0.04, -0.088);         // 墨鏡
+  torso.add(head);
+
+  // 左臂（扶槍）
+  const armL = new THREE.Group();
+  armL.position.set(-0.22, 0.6, -0.02);
+  armL.rotation.x = 0.2;
+  cap(armL, suit, 0.05, 0.18, 0, -0.02, -0.18, Math.PI / 2 + 0.1);
+  cap(armL, suit, 0.042, 0.16, 0, -0.05, -0.36, Math.PI / 2 + 0.35);
+  blob(armL, skin, 0.035, 1, 0.6, 1.2, 0.06, -0.11, -0.46, 0.4);
+  torso.add(armL);
+
+  // 右臂（持槍前伸——射擊姿態）
+  const armR = new THREE.Group();
+  armR.position.set(0.22, 0.6, -0.02);
+  armR.rotation.x = 0.15;
+  cap(armR, suit, 0.05, 0.18, 0, -0.01, -0.2, Math.PI / 2 + 0.05);
+  cap(armR, suit, 0.042, 0.18, 0, -0.02, -0.42, Math.PI / 2);
+  blob(armR, skin, 0.035, 1, 0.6, 1.2, 0, -0.03, -0.56, 0.15); // 手
+  // 手槍
+  box(armR, steel, 0.032, 0.05, 0.14, 0, -0.02, -0.66);
+  box(armR, shade, 0.028, 0.06, 0.045, 0, -0.06, -0.62, 0.3);  // 握把
+  cap(armR, steel, 0.008, 0.02, 0, 0, -0.74, Math.PI / 2);     // 槍管
+  torso.add(armR);
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF: armR, armD: armL, torso };
+  g.userData.kind = 'agent';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
 // KY 變異體：初代感染者（1.75m）——還有人形，但右臂黑色壞死腫脹、
 // 皮膚裂縫滲出 KY 藍光、歪頭血口、針孔瞳。感染早期的駭人，不是腐爛的殭屍。
 export function buildMutantMesh() {

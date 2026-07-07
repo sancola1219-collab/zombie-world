@@ -19,11 +19,12 @@ import { Lurker } from './game/enemies/lurker.js';
 import { Spider } from './game/enemies/spider.js';
 import { Creeper } from './game/enemies/creeper.js';
 import { Bloater } from './game/enemies/bloater.js';
+import { Agent } from './game/enemies/agent.js';
 import { Mutant } from './game/enemies/mutant.js';
 import { Prime } from './game/enemies/prime.js';
 import { separateEnemies } from './game/enemies/base.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, mutant: Mutant, prime: Prime };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
@@ -518,8 +519,9 @@ function boot() {
     const hasNext = LEVEL.next && CHAPTERS[LEVEL.next];
     $('btn-nextchap').style.display = hasNext ? '' : 'none';
     if (!hasNext) {
-      $('chapend-title').textContent = '全章節　完';
-      saves.remove(PROGRESS_KEY); // 通關後回到乾淨狀態
+      // isFinal＝真正的結局；否則是「待續」的章末（下一章尚未製作）
+      $('chapend-title').textContent = LEVEL.isFinal ? '全章節　完' : `${LEVEL.name.split('：')[0]}　完`;
+      saves.remove(PROGRESS_KEY); // 回到乾淨狀態
     }
     $('chapend-note').textContent = LEVEL.endingText || '';
     $('countdown').style.display = 'none';

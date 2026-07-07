@@ -220,6 +220,12 @@ export class AudioEngine {
     this._tone({ type: 'square', from: 1100, vol: 0.06, dur: 0.035 });
   }
 
+  _enemygun() {
+    // 敵人手槍：比玩家的悶、帶點距離感
+    this._burst({ type: 'highpass', freq: 700, vol: 0.32, dur: 0.05 });
+    this._burst({ freq: 175, vol: 0.4, dur: 0.1 });
+  }
+
   _reload() {
     this._tone({ type: 'square', from: 700, vol: 0.07, dur: 0.04 });
     this._burst({ freq: 800, type: 'bandpass', vol: 0.2, dur: 0.06, when: 0.12 });
