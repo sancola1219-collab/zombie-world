@@ -75,6 +75,23 @@ export const CHAPTER2 = {
     // 安全梯
     { room: 'fireexit', type: 'crate', x: 23, z: 9.5, solid: 0.4 },
     { room: 'fireexit', type: 'blood', x: 25, z: 8 },
+    { room: 'fireexit', type: 'cardboard', x: 26.8, z: 7.2 },
+    // 地面雜物與遺體（v3.6.0 環境營造）
+    { room: 'corr', type: 'debris', x: 10.5, z: 1.9 },
+    { room: 'corr', type: 'cardboard', x: 18.5, z: 2.2 },
+    { room: 'storage', type: 'cardboard', x: 10.8, z: 4.2 },
+    { room: 'storage', type: 'corpse', x: 8.6, z: 8.4, variant: 0 }, // 暫存區倉管
+    { room: 'qalab', type: 'corpse', x: 15.2, z: 6.8, variant: 2 }, // 被咬斷喉嚨的晨星人員
+    { room: 'qalab', type: 'debris', x: 18.8, z: 10.4 },            // 破裂試管與翻倒器材
+    { room: 'medbay', type: 'corpse', x: 26.4, z: 2.6, variant: 1 }, // 白袍醫護
+    { room: 'medbay', type: 'debris', x: 24.6, z: 4.6 },
+  ],
+  // 地面危險區：黑色 KY 滲液、倒地燃燒的酒精燈（原著第二章環境危險）
+  hazards: [
+    { room: 'eroom', type: 'slime', x: 3.2, z: 7.4, r: 0.9 },
+    { room: 'qalab', type: 'fire', x: 14.8, z: 7.8, r: 0.7 },  // 燃燒的酒精燈
+    { room: 'qalab', type: 'slime', x: 17.8, z: 8.2, r: 0.75 },
+    { room: 'medbay', type: 'slime', x: 23.2, z: 4.9, r: 0.7 },
   ],
   documents: [
     {

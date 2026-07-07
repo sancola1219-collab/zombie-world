@@ -23,9 +23,11 @@ import { Agent } from './game/enemies/agent.js';
 import { Mutant } from './game/enemies/mutant.js';
 import { Prime } from './game/enemies/prime.js';
 import { Warlord } from './game/enemies/warlord.js';
+import { Keeper } from './game/enemies/keeper.js';
 import { separateEnemies } from './game/enemies/base.js';
+import { hazardAt } from './game/hazards.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord, keeper: Keeper };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
@@ -272,9 +274,9 @@ function boot() {
     if (_tui && isTouchOnly) _tui.style.display = m === 'play' ? 'block' : 'none';
     if (m === 'paused') {
       $('pause-tip').textContent = isTouchOnly
-        ? '左下搖桿移動（推滿奔跑）．滑動畫面轉視角．右下按鈕互動'
+        ? '左下搖桿移動（推滿奔跑）．滑動畫面轉視角．右下按鈕互動/跳躍'
         : (input.dragMode ? '按住滑鼠拖曳調整視角' : '點擊畫面鎖定視角') +
-          '．WASD 移動．Shift 奔跑．E 互動．Esc 暫停';
+          '．WASD 移動．Shift 奔跑．空白鍵 跳躍．E 互動．Esc 暫停';
     }
   }
 
@@ -702,6 +704,10 @@ function boot() {
       player.poison = Math.max(player.poison, seconds);
       if (!was) hintFlash('中毒了——找藍色草藥解毒', 3.2);
     },
+    stunPlayer(seconds) {
+      player.stun = Math.max(player.stun, seconds);
+      hintFlash('被電擊麻痺——行動遲緩！', 2.2);
+    },
     boom(x, y, z) {
       renderer.explosion(x, y, z);
       audio.play('explosion');
@@ -934,9 +940,26 @@ function boot() {
     player.update(dt, actions, world);
 
     stepDistance += Math.hypot(player.x - beforeX, player.z - beforeZ);
-    if (stepDistance > (actions.run ? 1.05 : 0.8)) {
+    if (player.grounded() && stepDistance > (actions.run ? 1.05 : 0.8)) {
       stepDistance = 0;
       audio.play('step');
+    }
+
+    // 地面危險區（火焰/黏液/帶電積水）——跳躍騰空中免疫，跳過火焰是活路
+    const hz = hazardAt(LEVEL.hazards, player.x, player.z, player.y);
+    if (hz) {
+      if (hz.poison > 0) enemyCtx.poison(hz.poison);
+      if (hz.dmg > 0 && player.hurt(Math.round(hz.dmg * diff().dmg))) {
+        if (hz.stun > 0) player.stun = Math.max(player.stun, hz.stun);
+        hud.damageFlash();
+        renderer.shake(0.06);
+        audio.play(hz.type === 'shock' ? 'shock' : hz.type === 'fire' ? 'burn' : 'hurt');
+        hintFlash(hz.label, 2);
+        if (player.hp <= 0) {
+          die();
+          return;
+        }
+      }
     }
 
     if (actions.weaponSlot !== null) {

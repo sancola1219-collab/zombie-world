@@ -200,6 +200,19 @@ export class AudioEngine {
     this._tone({ type: 'square', from: 1400, vol: 0.08, dur: 0.05, when: 0.13 });
   }
 
+  // 電擊：高頻劈啪＋下滑方波（守門者砸地/帶電積水）
+  _shock() {
+    this._burst({ type: 'highpass', freq: 2400, vol: 0.3, dur: 0.16 });
+    this._tone({ type: 'square', from: 820, to: 130, vol: 0.1, dur: 0.22 });
+    this._burst({ type: 'highpass', freq: 3400, vol: 0.16, dur: 0.09, when: 0.07 });
+  }
+
+  // 火焰燒灼：低頻噗聲＋噪音尾（踩進火焰）
+  _burn() {
+    this._burst({ freq: 500, vol: 0.28, dur: 0.3 });
+    this._tone({ type: 'sawtooth', from: 160, to: 60, vol: 0.06, dur: 0.3 });
+  }
+
   _handgunShot() {
     this._burst({ type: 'highpass', freq: 900, vol: 0.55, dur: 0.07 });
     this._burst({ freq: 220, vol: 0.6, dur: 0.12 });

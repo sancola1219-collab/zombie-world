@@ -771,6 +771,100 @@ export function buildWarlordMesh() {
   return g;
 }
 
+// 電氣室守門者（第一章魔王，約 1.9m）：原 E 區值班技術員——
+// 右半身被電弧燒焦碳化、背上插著斷裂電纜（尖端帶電火花）、右臂帶電藍光裂縫。
+export function buildKeeperMesh() {
+  const g = new THREE.Group();
+  const skin = fleshMat(0xa89880);       // 未燒傷側：病態蒼白
+  const char = wetMat(0x1a1410);         // 碳化焦黑（濕亮＝滲液）
+  const charMid = wetMat(0x2e2018);
+  const uniform = ragMat(0x35424e);      // 工務制服（灰藍）
+  const uniformDark = ragMat(0x27313b);
+  const cable = sheenMat(0x14161a, 0x3a4656, 40);
+  const spark = new THREE.MeshBasicMaterial({ color: 0x9adcff }); // 電火花
+  const arc = new THREE.MeshBasicMaterial({ color: 0x5aa8e8 });   // 帶電裂縫
+
+  // 腿（制服褲，右腿燒焦）
+  const legL = new THREE.Group();
+  legL.position.set(-0.13, 0.95, 0);
+  cap(legL, uniform, 0.075, 0.3, 0, -0.18, 0, -0.04);
+  cap(legL, uniform, 0.06, 0.28, 0, -0.6, 0.02, 0.08);
+  blob(legL, mat(0x14161a), 0.055, 1.1, 0.5, 2.0, 0, -0.9, -0.04); // 工作靴
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.13, 0.95, 0);
+  cap(legR, charMid, 0.075, 0.3, 0, -0.18, 0, -0.04);
+  cap(legR, char, 0.06, 0.28, 0, -0.6, 0.02, 0.08);
+  blob(legR, arc, 0.015, 1, 2.2, 0.5, 0.03, -0.45, -0.07); // 小腿電光裂縫
+  blob(legR, mat(0x14161a), 0.055, 1.1, 0.5, 2.0, 0, -0.9, -0.04);
+  g.add(legR);
+
+  // 軀幹（寬厚前傾；左半制服、右半燒穿露焦肉）
+  const torso = new THREE.Group();
+  torso.position.y = 0.93;
+  torso.rotation.x = 0.18;
+  blob(torso, uniformDark, 0.12, 1.7, 1.0, 1.2, 0, 0.05, 0);
+  blob(torso, uniform, 0.14, 1.65, 1.5, 1.15, -0.05, 0.52, 0);   // 左胸（制服）
+  blob(torso, char, 0.13, 1.3, 1.45, 1.1, 0.12, 0.5, -0.02);     // 右胸（燒穿碳化）
+  blob(torso, arc, 0.022, 1, 2.8, 0.5, 0.14, 0.5, -0.16);        // 胸口電光裂縫
+  blob(torso, uniform, 0.085, 1, 0.85, 1, -0.27, 0.68, 0);       // 左肩
+  blob(torso, charMid, 0.09, 1, 0.9, 1, 0.28, 0.66, 0.01);       // 右肩（焦）
+  cap(torso, skin, 0.05, 0.05, -0.01, 0.8, -0.02, 0.15);         // 頸
+
+  // 背上斷裂電纜：兩截外弓的粗纜＋帶電斷口
+  const cab1 = new THREE.Group();
+  cab1.position.set(0.1, 0.62, 0.2);
+  cab1.rotation.x = -0.7;
+  cyl(cab1, cable, 0.028, 0.034, 0.55, 8, 0, 0.24, 0, 0.25);
+  blob(cab1, spark, 0.035, 1, 1, 1, 0.06, 0.5, 0.02);            // 斷口火花
+  torso.add(cab1);
+  const cab2 = new THREE.Group();
+  cab2.position.set(-0.12, 0.4, 0.2);
+  cab2.rotation.x = -0.95;
+  cyl(cab2, cable, 0.022, 0.028, 0.4, 8, 0, 0.18, 0, -0.35);
+  blob(cab2, spark, 0.026, 1, 1, 1, -0.05, 0.36, 0.02);
+  torso.add(cab2);
+
+  // 頭（右半臉燒熔、左眼殘存、右眼電藍）
+  const head = new THREE.Group();
+  head.position.set(0.01, 0.86, -0.04);
+  head.rotation.z = -0.12;
+  blob(head, skin, 0.1, 1.0, 1.15, 1.05, -0.02, 0.06, 0);
+  blob(head, char, 0.09, 0.95, 1.1, 1.0, 0.045, 0.055, -0.005);  // 右半臉碳化
+  blob(head, mat(0x101014), 0.02, 1.3, 1.1, 0.6, -0.045, 0.06, -0.09); // 左眼（黑陷）
+  blob(head, spark, 0.02, 1.2, 1.1, 0.7, 0.05, 0.06, -0.09);     // 右眼（電藍）
+  blob(head, charMid, 0.05, 1.0, 0.55, 0.85, 0.01, -0.07, -0.04, 0.4); // 半脫下顎
+  torso.add(head);
+
+  // 左臂（制服，垂盪）
+  const armD = new THREE.Group();
+  armD.position.set(-0.29, 0.64, 0.01);
+  armD.rotation.z = 0.14;
+  cap(armD, uniform, 0.06, 0.1, 0, -0.06, 0);
+  cap(armD, skin, 0.045, 0.19, 0, -0.26, 0.005, 0.06);
+  cap(armD, skin, 0.04, 0.19, 0.005, -0.52, 0.025, 0.1);
+  blob(armD, skin, 0.038, 1, 1.3, 0.6, 0.01, -0.66, 0.04);
+  torso.add(armD);
+
+  // 右臂（★ 帶電巨臂：碳化腫脹、電光裂縫、砸地主武器）
+  const armF = new THREE.Group();
+  armF.position.set(0.3, 0.62, -0.01);
+  armF.rotation.x = 0.15;
+  cap(armF, charMid, 0.085, 0.14, 0, -0.02, -0.1, Math.PI / 2);
+  blob(armF, arc, 0.02, 1, 2.6, 0.5, 0.02, 0.02, -0.2);
+  cap(armF, char, 0.075, 0.24, 0, -0.04, -0.36, Math.PI / 2 + 0.12);
+  blob(armF, arc, 0.018, 1, 2.4, 0.5, 0.02, -0.04, -0.46);
+  blob(armF, char, 0.08, 1, 0.7, 1.3, 0, -0.09, -0.64, 0.3);     // 焦黑巨拳
+  blob(armF, spark, 0.022, 1, 1, 1, 0, -0.13, -0.72);            // 拳端電花
+  torso.add(armF);
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF, armD, torso };
+  g.userData.kind = 'keeper';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
 // === 倖存者 NPC（白袍研究員，站姿，無傷） ===
 
 export function buildSurvivorMesh() {
@@ -797,6 +891,45 @@ export function buildSurvivorMesh() {
   blob(g, hair, 0.06, 1, 2.2, 0.5, 0, 1.35, 0.09);             // 馬尾
   blob(g, mat(0x201812), 0.016, 1.2, 1, 0.5, -0.035, 1.58, -0.088); // 眼
   blob(g, mat(0x201812), 0.016, 1.2, 1, 0.5, 0.035, 1.58, -0.088);
+  return g;
+}
+
+// === 遺體（場景道具：死者仰躺，周圍血泊）===
+// variant 0=工人制服、1=白袍、2=警衛/黑衣；seed 決定姿勢微差
+export function buildCorpseMesh(variant = 0, seed = 1) {
+  const g = new THREE.Group();
+  const cloth =
+    variant === 1 ? ragMat(0xc8c8c2) : variant === 2 ? ragMat(0x1c2026) : ragMat(0x3a4550);
+  const clothDark =
+    variant === 1 ? ragMat(0xb0b0a8) : variant === 2 ? ragMat(0x14181e) : ragMat(0x2c3640);
+  const skin = fleshMat(0x9a8f7c); // 死者膚色（失血蒼灰）
+  const s = (seed * 137) % 7;
+
+  // 血泊
+  const pool = new THREE.Mesh(
+    new THREE.CircleGeometry(0.55 + (s % 3) * 0.12, 14),
+    new THREE.MeshBasicMaterial({ color: 0x2e0606, transparent: true, opacity: 0.88 })
+  );
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.y = 0.012;
+  g.add(pool);
+
+  // 仰躺軀幹（貼地）
+  const body = new THREE.Group();
+  body.rotation.y = (s * 0.9) % (Math.PI * 2);
+  blob(body, cloth, 0.13, 1.5, 0.55, 1.9, 0, 0.09, 0);           // 胸腹（壓扁）
+  blob(body, clothDark, 0.1, 1.5, 0.5, 1.2, 0, 0.07, 0.28);      // 骨盆
+  blob(body, skin, 0.085, 1.05, 0.75, 1.0, 0.02, 0.09, -0.32);   // 頭（側傾）
+  blob(body, wetMat(0x3c0d0d), 0.05, 1.3, 0.4, 1, 0.05, 0.1, -0.2); // 頸胸創口
+  // 四肢攤開
+  cap(body, cloth, 0.045, 0.3, -0.24, 0.07, -0.1, 0.2, 0, 1.2);  // 左臂外攤
+  cap(body, skin, 0.035, 0.2, -0.42, 0.05, 0.03, 0.1, 0, 1.35);
+  cap(body, cloth, 0.045, 0.28, 0.2, 0.07, -0.05, 0.2, 0, -0.7); // 右臂
+  cap(body, clothDark, 0.055, 0.34, -0.1, 0.07, 0.52, 1.35, 0, 0.15); // 左腿
+  cap(body, clothDark, 0.055, 0.36, 0.12, 0.07, 0.54, 1.3, 0, -0.2);  // 右腿
+  blob(body, mat(0x14161a), 0.05, 1, 0.5, 1.8, -0.13, 0.06, 0.86);    // 鞋
+  blob(body, mat(0x14161a), 0.05, 1, 0.5, 1.8, 0.16, 0.06, 0.88);
+  g.add(body);
   return g;
 }
 

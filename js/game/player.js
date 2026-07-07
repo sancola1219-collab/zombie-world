@@ -4,6 +4,8 @@ export const WALK_SPEED = 3.2;
 export const RUN_SPEED = 5.2;
 export const PLAYER_RADIUS = 0.35;
 export const EYE_HEIGHT = 1.6;
+export const JUMP_SPEED = 4.2; // 起跳初速（m/s）
+export const GRAVITY = 11.5; // 下墜重力（m/s²）
 
 export function closestPointOnSegment(px, pz, x1, z1, x2, z2) {
   const dx = x2 - x1;
@@ -56,6 +58,13 @@ export class Player {
     this.iframes = 0; // 受擊後短暫無敵，避免被連續咬融化
     this.poison = 0; // 中毒剩餘秒數（>0 時每 0.8s 扣 3 血，藍草藥可解）
     this._poisonTick = 0;
+    this.y = 0; // 離地高度（跳躍用；0＝貼地）
+    this.vy = 0;
+    this.stun = 0; // 麻痺剩餘秒數（電擊等；移動大幅減速）
+  }
+
+  grounded() {
+    return this.y <= 0.001;
   }
 
   // 回傳是否實際受傷（無敵幀中回 false）
@@ -83,6 +92,15 @@ export class Player {
 
   update(dt, actions, world) {
     if (this.iframes > 0) this.iframes = Math.max(0, this.iframes - dt);
+    if (this.stun > 0) this.stun = Math.max(0, this.stun - dt);
+    // 跳躍：貼地才能起跳；空中受重力，落地歸零
+    if (actions.jump && this.grounded() && this.stun <= 0) this.vy = JUMP_SPEED;
+    if (this.vy !== 0 || this.y > 0) {
+      this.vy -= GRAVITY * dt;
+      this.y = Math.max(0, this.y + this.vy * dt);
+      if (this.y === 0 && this.vy < 0) this.vy = 0;
+    }
+    this.eyeHeight = EYE_HEIGHT + this.y;
     if (this.poison > 0) {
       this.poison = Math.max(0, this.poison - dt);
       this._poisonTick += dt;
@@ -99,8 +117,11 @@ export class Player {
       dirX /= len;
       dirZ /= len;
     }
-    // Danger（HP<33）跛行減速——經典設計
-    const speed = (actions.run ? RUN_SPEED : WALK_SPEED) * (this.hp < 33 ? 0.8 : 1);
+    // Danger（HP<33）跛行減速——經典設計；麻痺中速度剩 35%
+    const speed =
+      (actions.run ? RUN_SPEED : WALK_SPEED) *
+      (this.hp < 33 ? 0.8 : 1) *
+      (this.stun > 0 ? 0.35 : 1);
     this.running = !!(actions.run && len > 0.01); // 供潛伏者等 AI 感知
     let nx = this.x + dirX * speed * dt;
     let nz = this.z + dirZ * speed * dt;

@@ -73,6 +73,22 @@ export const CHAPTER4 = {
     { room: 'fcorr', type: 'pipe', x: 22.5, z: 5, len: 8, y: 2.7 },
     { room: 'fcorr', type: 'crate', x: 21, z: 10, solid: 0.4 },
     { room: 'fcorr', type: 'blood', x: 23, z: 9 },
+    // 地面雜物與遺體（v3.6.0 環境營造）
+    { room: 'wastetank', type: 'corpse', x: 5.5, z: 8.2, variant: 0 },
+    { room: 'wastetank', type: 'debris', x: 2.2, z: 3.4 },
+    { room: 'repair', type: 'debris', x: 11, z: 2.8 },
+    { room: 'repair', type: 'cardboard', x: 17.5, z: 1.2 },
+    { room: 'platform2f', type: 'corpse', x: 14.5, z: 5.6, variant: 2 }, // 沒躲過火箭的晨星兵
+    { room: 'fcorr', type: 'debris', x: 21.2, z: 6.5 },
+    { room: 'fcorr', type: 'cardboard', x: 23.6, z: 11.6 },
+  ],
+  // 地面危險區：廢液滲流、帶電積水、火箭餘燼（原著第四章環境危險）
+  hazards: [
+    { room: 'wastetank', type: 'slime', x: 3, z: 7, r: 1.0 },
+    { room: 'wastetank', type: 'slime', x: 5.5, z: 3.5, r: 0.8 },
+    { room: 'repair', type: 'shock', x: 14, z: 2, r: 0.8 },      // 斷裂電纜泡在積水裡——跳過去
+    { room: 'platform2f', type: 'fire', x: 18.5, z: 9.2, r: 0.75 }, // 火箭轟擊的餘燼
+    { room: 'fcorr', type: 'fire', x: 22, z: 10.4, r: 0.8 },
   ],
   documents: [
     {

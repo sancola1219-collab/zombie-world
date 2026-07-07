@@ -19,6 +19,8 @@ import {
   buildMutantMesh,
   buildPrimeMesh,
   buildWarlordMesh,
+  buildKeeperMesh,
+  buildCorpseMesh,
 } from './meshes.js';
 
 const ENEMY_BUILDERS = {
@@ -33,6 +35,7 @@ const ENEMY_BUILDERS = {
   mutant: buildMutantMesh,
   prime: buildPrimeMesh,
   warlord: buildWarlordMesh,
+  keeper: buildKeeperMesh,
 };
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
@@ -176,6 +179,15 @@ export class Renderer {
       const mesh = makeProp(p);
       if (!mesh) continue;
       (this.roomGroups.get(p.room) || this.scene).add(mesh);
+    }
+
+    // 地面危險區視覺（傷害邏輯在 game/hazards.js，這裡純裝飾）
+    if (!this._hazardFx) this._hazardFx = [];
+    for (const h of world.data.hazards || []) {
+      const fx = makeHazardFx(h);
+      if (!fx) continue;
+      (this.roomGroups.get(h.room) || this.scene).add(fx.group);
+      this._hazardFx.push(fx);
     }
 
     const doorMat = new THREE.MeshPhongMaterial({ map: getTexture('wood'), color: 0x9a7a55, shininess: 0, specular: 0x000000, dithering: true });
@@ -762,6 +774,20 @@ export class Renderer {
     this._shake *= 0.86;
     for (const m of this.pickupMeshes.values()) (m.userData.spin || m).rotation.y += 0.02;
 
+    // 火焰緩慢起伏（純裝飾；光源強度恆定——不做亮度閃爍，使用者對頻閃敏感）
+    if (this._hazardFx) {
+      for (const fx of this._hazardFx) {
+        if (!fx.group.parent || !fx.group.parent.visible) continue;
+        fx.t = (fx.t || 0) + dt;
+        for (let i = 0; i < fx.flames.length; i++) {
+          const f = fx.flames[i];
+          const s = 1 + Math.sin(fx.t * 3.1 + i * 2.1) * 0.16;
+          f.scale.y = f.userData.baseSy * s;
+          f.rotation.y += dt * 1.4;
+        }
+      }
+    }
+
     // 燈光已停用亮度抖動——維持恆定，畫面完全不閃（使用者對閃爍/光敏敏感）。
     // 光的恐怖氛圍改由固定的暖色低強度＋集中光圈營造，不靠明暗跳動。
     for (const f of this._flickers) {
@@ -852,6 +878,80 @@ function makeWall(x1, z1, x2, z2, yBase, height, mat, cx, cz) {
   mesh.position.set(px, yBase + height / 2, pz);
   mesh.rotation.y = Math.atan2(z1 - z2, x2 - x1);
   return mesh;
+}
+
+// === 地面危險區視覺 ===
+// fire：焦痕＋錐形火舌＋恆定暖光；slime：發藍光的黑色黏液灘；shock：積水＋電花
+function makeHazardFx(h) {
+  const g = new THREE.Group();
+  g.position.set(h.x, 0, h.z);
+  const r = h.r ?? 0.85;
+  const flames = [];
+
+  if (h.type === 'fire') {
+    const scorch = new THREE.Mesh(
+      new THREE.CircleGeometry(r * 1.15, 14),
+      new THREE.MeshBasicMaterial({ color: 0x120a06, transparent: true, opacity: 0.85 })
+    );
+    scorch.rotation.x = -Math.PI / 2;
+    scorch.position.y = 0.013;
+    g.add(scorch);
+    const cols = [0xffd27a, 0xff9a3c, 0xff5f1e, 0xd63c12];
+    const n = 5;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + h.x + h.z; // 平面內散佈（帶點座標雜訊）
+      const rad = r * (0.15 + ((i * 53) % 40) / 100);
+      const hgt = 0.5 + ((i * 37) % 30) / 100 * 0.5;
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.13 + ((i * 29) % 12) / 100, hgt, 6),
+        new THREE.MeshBasicMaterial({ color: cols[i % cols.length], transparent: true, opacity: 0.88, fog: false })
+      );
+      flame.position.set(Math.cos(a) * rad, hgt / 2, Math.sin(a) * rad);
+      flame.userData.baseSy = 1;
+      g.add(flame);
+      flames.push(flame);
+    }
+    // 恆定暖光（不閃爍）；範圍小、衰減快，只照亮火場周圍
+    const light = new THREE.PointLight(0xff8a40, 7, 4.5, 1.4);
+    light.position.y = 0.7;
+    g.add(light);
+  } else if (h.type === 'slime') {
+    const pool = new THREE.Mesh(
+      new THREE.CircleGeometry(r, 14),
+      new THREE.MeshPhongMaterial({ color: 0x0a0e10, specular: 0x2a6a62, shininess: 60, dithering: true })
+    );
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = 0.014;
+    g.add(pool);
+    for (let i = 0; i < 3; i++) {
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05 + i * 0.015, 6, 5),
+        new THREE.MeshBasicMaterial({ color: 0x2fa89a, transparent: true, opacity: 0.6 })
+      );
+      glow.scale.y = 0.3;
+      glow.position.set(Math.cos(i * 2.4) * r * 0.5, 0.02, Math.sin(i * 2.4) * r * 0.5);
+      g.add(glow);
+    }
+  } else if (h.type === 'shock') {
+    const water = new THREE.Mesh(
+      new THREE.CircleGeometry(r, 14),
+      new THREE.MeshPhongMaterial({ color: 0x0c1014, specular: 0x5a7a9a, shininess: 80, dithering: true })
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = 0.014;
+    g.add(water);
+    for (let i = 0; i < 3; i++) {
+      const sp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.028, 5, 4),
+        new THREE.MeshBasicMaterial({ color: 0x9adcff })
+      );
+      sp.position.set(Math.cos(i * 2.1 + 1) * r * 0.55, 0.04, Math.sin(i * 2.1 + 1) * r * 0.55);
+      g.add(sp);
+    }
+  } else {
+    return null;
+  }
+  return { group: g, flames, t: 0 };
 }
 
 // === 場景道具（程序生成，低多邊形） ===
@@ -965,6 +1065,57 @@ function makeProp(p) {
       pipe.position.y = 0;
       g.add(pipe);
       g.position.y = p.y ?? 2.6;
+      break;
+    }
+    case 'corpse': {
+      // 死者遺體（variant 0=工人 1=白袍 2=警衛/黑衣）
+      g.add(buildCorpseMesh(p.variant ?? Math.floor(rng() * 3), Math.floor(p.x * 7 + p.z * 13)));
+      break;
+    }
+    case 'cardboard': {
+      // 紙箱堆：1~3 個牛皮紙箱，帶封箱膠帶
+      const cbMat = () => new THREE.MeshLambertMaterial({ color: 0x9a7b4f, dithering: true });
+      const tape = new THREE.MeshLambertMaterial({ color: 0x6e5638, dithering: true });
+      const n = 1 + Math.floor(rng() * 3);
+      for (let i = 0; i < n; i++) {
+        const s = 0.42 + rng() * 0.22;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.75, s), cbMat());
+        const bx = i === 0 ? 0 : (rng() - 0.5) * 0.9;
+        const bz = i === 0 ? 0 : (rng() - 0.5) * 0.9;
+        const by = i === 2 ? 0.72 : s * 0.375; // 第三個疊上去
+        b.position.set(i === 2 ? 0 : bx, by, i === 2 ? 0 : bz);
+        b.rotation.y = rng() * 0.8;
+        g.add(b);
+        const t = new THREE.Mesh(new THREE.BoxGeometry(0.06, s * 0.76, s * 1.01), tape);
+        t.position.copy(b.position);
+        t.rotation.y = b.rotation.y;
+        g.add(t);
+      }
+      break;
+    }
+    case 'debris': {
+      // 雜物堆：碎木板、磚塊、瓶罐散落一地
+      for (let i = 0; i < 5; i++) {
+        const kind = rng();
+        let m;
+        if (kind < 0.4) {
+          m = new THREE.Mesh(new THREE.BoxGeometry(0.3 + rng() * 0.4, 0.03, 0.1), wood()); // 碎板
+        } else if (kind < 0.7) {
+          m = new THREE.Mesh(
+            new THREE.BoxGeometry(0.14, 0.09, 0.1),
+            new THREE.MeshLambertMaterial({ color: 0x5e564a, dithering: true }) // 碎磚塊
+          );
+        } else {
+          m = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.045, 0.045, 0.16, 6),
+            new THREE.MeshLambertMaterial({ color: [0x3a4a3a, 0x4a3a30, 0x3a3f48][i % 3], dithering: true }) // 瓶罐
+          );
+          m.rotation.z = Math.PI / 2;
+        }
+        m.position.set((rng() - 0.5) * 1.3, 0.05, (rng() - 0.5) * 1.3);
+        m.rotation.y = rng() * Math.PI * 2;
+        g.add(m);
+      }
       break;
     }
     default:

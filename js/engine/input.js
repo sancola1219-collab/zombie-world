@@ -96,6 +96,7 @@ export class Input {
         this.pressed('ShiftLeft') ||
         this.pressed('ShiftRight') ||
         Math.hypot(this.touchMove.x, this.touchMove.z) > 0.85, // 搖桿推滿＝奔跑
+      jump: this.consumePressed('Space'),
       interact: this.consumePressed('KeyE'),
       fire: this.consumeMouseJust(0),
       fireHeld: this.mouseButtons.has(0), // 全自動/持續噴射武器用

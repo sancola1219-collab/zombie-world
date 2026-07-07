@@ -81,6 +81,9 @@ export const CHAPTER1 = {
     // 走廊
     { room: 'corr', type: 'papers', x: 13.5, z: 6.2 },
     { room: 'corr', type: 'blood', x: 17, z: 6 },
+    { room: 'corr', type: 'debris', x: 6.5, z: 6.2 },
+    { room: 'corr', type: 'corpse', x: 20.5, z: 6.2, variant: 0 }, // 倒下的同事
+    { room: 'corr', type: 'blood', x: 21.2, z: 6.4 },
     // 反應槽區：槽體（大桶陣）與管線
     { room: 'reactor', type: 'barrel', x: 3, z: 10, solid: 0.35 },
     { room: 'reactor', type: 'barrel', x: 3.9, z: 10.3, solid: 0.35 },
@@ -92,12 +95,17 @@ export const CHAPTER1 = {
     { room: 'reactor', type: 'crate', x: 6.5, z: 14.5, solid: 0.4 },
     { room: 'reactor', type: 'blood', x: 4.5, z: 16.5 },
     { room: 'reactor', type: 'papers', x: 8, z: 12 },
-    // E區電氣室：爆發現場
+    { room: 'reactor', type: 'cardboard', x: 12.6, z: 12.4 },
+    { room: 'reactor', type: 'debris', x: 5.2, z: 13.6 },
+    { room: 'reactor', type: 'corpse', x: 9.5, z: 15.8, variant: 0 }, // 巡檢技術員
+    // E區電氣室：爆發現場（守門者的巢）
     { room: 'eroom', type: 'blood', x: 2.5, z: 21 },
     { room: 'eroom', type: 'blood', x: 1.5, z: 23 },
     { room: 'eroom', type: 'blood', x: 3.6, z: 23.8 },
     { room: 'eroom', type: 'bodybag', x: 1.2, z: 20.3, rot: 0.4 },
     { room: 'eroom', type: 'crate', x: 4.3, z: 24.2, solid: 0.4 },
+    { room: 'eroom', type: 'corpse', x: 3.9, z: 22.4, variant: 0 }, // 沒逃出來的同班技術員
+    { room: 'eroom', type: 'debris', x: 1.4, z: 24.1 },
     // F區管線
     { room: 'fpipes', type: 'pipe', x: 9.5, z: 20, len: 8, y: 3 },
     { room: 'fpipes', type: 'pipe', x: 9.5, z: 22, len: 8, y: 2.6 },
@@ -113,6 +121,10 @@ export const CHAPTER1 = {
     { room: 'warehouse', type: 'crate', x: 16.9, z: 15.2, solid: 0.4 },
     { room: 'warehouse', type: 'crate', x: 21.5, z: 16.5, solid: 0.4 },
     { room: 'warehouse', type: 'blood', x: 20, z: 12 },
+    { room: 'warehouse', type: 'cardboard', x: 15.6, z: 16.8 },
+    { room: 'warehouse', type: 'cardboard', x: 22.6, z: 13.2 },
+    { room: 'warehouse', type: 'corpse', x: 18.4, z: 17.4, variant: 2 }, // 晨星黑衣人
+    { room: 'warehouse', type: 'debris', x: 20.6, z: 15.4 },
     // 廢液暫存區：桶陣、屍袋、鑰匙卡現場
     { room: 'waste', type: 'barrel', x: 15.5, z: 20.5, solid: 0.35 },
     { room: 'waste', type: 'barrel', x: 16.4, z: 20.8, solid: 0.35 },
@@ -121,18 +133,32 @@ export const CHAPTER1 = {
     { room: 'waste', type: 'bodybag', x: 20.5, z: 22.3, rot: 1.2 },
     { room: 'waste', type: 'blood', x: 20.2, z: 22.8 },
     { room: 'waste', type: 'blood', x: 18.5, z: 24 },
+    { room: 'waste', type: 'corpse', x: 21.6, z: 21.4, variant: 2 }, // 鑰匙卡的主人
+    { room: 'waste', type: 'debris', x: 17.4, z: 21.2 },
     // 貨梯間
     { room: 'freight', type: 'crate', x: 27.2, z: 12.8, solid: 0.4 },
     { room: 'freight', type: 'blood', x: 26, z: 15.5 },
     // 連通道：窗邊雨夜
     { room: 'eastcorr', type: 'chair_fallen', x: 31, z: 13, rot: 0.4 },
     { room: 'eastcorr', type: 'papers', x: 35, z: 15 },
-    { room: 'eastcorr', type: 'bodybag', x: 37.5, z: 13.2, rot: 0.2 },
+    { room: 'eastcorr', type: 'corpse', x: 37.5, z: 13.4, variant: 2 }, // 倒下的警衛（衝鋒槍就在他手邊）
     { room: 'eastcorr', type: 'blood', x: 37.2, z: 13.8 },
+    { room: 'eastcorr', type: 'debris', x: 32.5, z: 15.6 },
     // 警衛室
     { room: 'guard', type: 'table', x: 42, z: 13.5, solid: 0.5 },
     { room: 'guard', type: 'shelf', x: 45.7, z: 17, rot: -Math.PI / 2, solid: 0.28 },
     { room: 'guard', type: 'papers', x: 43, z: 16 },
+    { room: 'guard', type: 'cardboard', x: 41, z: 17.8 },
+  ],
+  // 地面危險區：E區短路火焰＋流向排水溝的 KY 黏液（原著第一章環境危險）
+  hazards: [
+    { room: 'eroom', type: 'fire', x: 1.2, z: 24.4, r: 0.8 },
+    { room: 'eroom', type: 'fire', x: 4.1, z: 20.4, r: 0.75 },
+    { room: 'eroom', type: 'slime', x: 2.4, z: 22.8, r: 0.85 },
+    { room: 'reactor', type: 'fire', x: 1.2, z: 17.6, r: 0.8 },  // E區走道口的短路火線
+    { room: 'reactor', type: 'slime', x: 5.6, z: 17.4, r: 0.8 },
+    { room: 'fpipes', type: 'shock', x: 12.6, z: 23.4, r: 0.8 }, // 斷落電纜泡在積水裡
+    { room: 'waste', type: 'slime', x: 19.2, z: 23.8, r: 0.85 },
   ],
   entities: {
     pickups: [
@@ -168,8 +194,8 @@ export const CHAPTER1 = {
       { id: 'p-gd-shells', item: 'shotgun_shells', count: 7, x: 45, z: 17 },
     ],
     enemies: [
-      { id: 'z-tech1', type: 'zombie', x: 1.2, z: 23.5 },
-      { id: 'z-tech2', type: 'zombie', x: 3.6, z: 21.2 },
+      { id: 'keeper-er', type: 'keeper', x: 2.5, z: 23.2 }, // ★ 電氣室守門者（原著第一章魔王）——帶電手臂砸地會麻痺
+      { id: 'z-tech1', type: 'zombie', x: 1.2, z: 21.8 },
       { id: 'z-r1', type: 'zombie', x: 7, z: 12 },
       { id: 'z-r2', type: 'zombie', x: 11.5, z: 16 },
       { id: 'z-r3', type: 'zombie', x: 3, z: 15.5 },
@@ -185,7 +211,7 @@ export const CHAPTER1 = {
       { id: 'spider-re', type: 'spider', x: 11, z: 9.5 },    // 反應槽區巨蛛
       { id: 'creeper-ws', type: 'creeper', x: 18.5, z: 23.2 }, // 廢液區蔓噬花（守著噴火器）
       { id: 'bloater-ws', type: 'bloater', x: 21.5, z: 24 }, // 廢液區脹屍
-      { id: 'bloater-er', type: 'bloater', x: 1.5, z: 22 },  // E區脹屍（前技術員）
+      { id: 'bloater-fp', type: 'bloater', x: 7.5, z: 24 },  // 管線區脹屍（原E區，讓位給守門者）
       { id: 'hunter-ec', type: 'hunter', x: 38.5, z: 15.5 }, // 連通道盡頭：逃脫的實驗體
     ],
     typewriters: [

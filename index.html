@@ -63,7 +63,7 @@
 <div id="vignette"></div>
 <div id="fx-vignette"></div>
 <div id="grain"></div>
-<div id="buildtag">v3.5.0</div>
+<div id="buildtag">v3.6.0</div>
 <div id="touch-ui" style="display:none">
   <div id="look-zone"></div>
   <div id="stick"><div id="stick-knob"></div></div>
@@ -71,6 +71,7 @@
   <div id="tcluster">
     <div class="tbtn" data-code="KeyQ">武器</div>
     <div class="tbtn" data-code="KeyR">裝填</div>
+    <div class="tbtn" data-code="Space">跳躍</div>
     <div class="tbtn" data-code="KeyE">互動</div>
     <div class="tbtn tfire" data-mouse="0">射擊</div>
   </div>
@@ -167,7 +168,7 @@
 <div id="help" class="overlay" style="display:none">
   <div class="panel">
     <h2>操作說明</h2>
-    <p class="tip" style="line-height:2">WASD 移動．滑鼠 視角．Shift 奔跑<br>左鍵 攻擊/射擊（衝鋒槍/噴火器按住連發）<br>E 互動．R 裝填．Q/數字鍵 切換武器<br>Tab 物品欄．M 地圖．Esc 暫停<br>手機：左搖桿移動（推滿奔跑）．滑動畫面轉視角</p>
+    <p class="tip" style="line-height:2">WASD 移動．滑鼠 視角．Shift 奔跑．空白鍵 跳躍<br>左鍵 攻擊/射擊（衝鋒槍/噴火器按住連發）<br>E 互動．R 裝填．Q/數字鍵 切換武器<br>Tab 物品欄．M 地圖．Esc 暫停<br>手機：左搖桿移動（推滿奔跑）．滑動畫面轉視角．右下「跳躍」鈕<br>提示：跳躍可以越過地上的火焰與黏液</p>
     <div class="menu-col"><button id="btn-help-back">返回</button></div>
   </div>
 </div>
@@ -191,7 +192,7 @@
     <p>你的瀏覽器不支援 WebGL，無法執行本遊戲。</p>
   </div>
 </div>
-<script type="module" src="./js/main.js?v=350" id="zw-entry"></script>
+<script type="module" src="./js/main.js?v=360" id="zw-entry"></script>
 <script>
 // 載入看門狗（傳統 script，舊瀏覽器也會執行）：
 // module 匯入鏈（含 three CDN）任一環節失敗時 boot() 不會跑，

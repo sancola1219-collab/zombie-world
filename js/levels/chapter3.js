@@ -69,6 +69,20 @@ export const CHAPTER3 = {
     { room: 'wasteway', type: 'blood', x: 21, z: 8.5 },
     { room: 'wasteway', type: 'bodybag', x: 23.5, z: 4.5, rot: 1.1 },
     { room: 'wasteway', type: 'pipe', x: 22, z: 0.6, len: 10, y: 3.2 },
+    // 地面雜物與遺體（v3.6.0 環境營造）
+    { room: 'tunnel', type: 'debris', x: 12, z: 2.6 },
+    { room: 'tunnel', type: 'corpse', x: 8.8, z: 1.4, variant: 2 }, // 被獵殺的晨星士兵
+    { room: 'server', type: 'cardboard', x: 8.5, z: 5.2 },
+    { room: 'server', type: 'corpse', x: 2.4, z: 6.4, variant: 1 }, // 資訊室值班員
+    { room: 'control', type: 'debris', x: 15, z: 9.5 },
+    { room: 'wasteway', type: 'corpse', x: 22.2, z: 4.9, variant: 0 },
+    { room: 'wasteway', type: 'debris', x: 20.6, z: 9.6 },
+  ],
+  // 地面危險區：伺服器短路冒火、散落帶電電纜（原著第三章環境危險）
+  hazards: [
+    { room: 'server', type: 'fire', x: 3, z: 8.2, r: 0.8 },    // 短路起火的機櫃腳
+    { room: 'server', type: 'shock', x: 6.6, z: 9.6, r: 0.8 }, // 地上帶電電纜
+    { room: 'wasteway', type: 'slime', x: 21.5, z: 8.2, r: 0.85 },
   ],
   documents: [
     {
