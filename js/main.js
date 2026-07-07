@@ -135,7 +135,7 @@ function boot() {
     document.addEventListener('touchstart', () => audio.unlock(), { once: true });
   }
   // 覆蓋層的觸控按鈕：合成按鍵事件，走與鍵盤完全相同的路徑
-  for (const btn of document.querySelectorAll('.synth-btn')) {
+  for (const btn of document.querySelectorAll('.synth-btn, .kp-btn')) {
     btn.addEventListener('click', () => {
       input.onKeyDown(btn.dataset.code);
       input.onKeyUp(btn.dataset.code);
@@ -180,6 +180,7 @@ function boot() {
   let everLocked = false;
   let hintOverride = null; // {text, t}
   let monoT = 0; // 內心獨白剩餘顯示秒數（邏輯時鐘）
+  let keypadInput = ''; // 密碼盤當前輸入
   let difficulty = 'standard';
   let bossDone = false;
   let countdownLeft = -1; // >0 表示自毀倒數進行中（邏輯時鐘）
@@ -216,12 +217,52 @@ function boot() {
     monoT = seconds;
   }
 
+  // === 密碼盤解謎 ===
+  function renderKeypad() {
+    const len = (LEVEL.exitCode || '').length || 4;
+    let dots = '';
+    for (let i = 0; i < len; i++) dots += i < keypadInput.length ? keypadInput[i] : '＿';
+    $('keypad-display').textContent = dots.split('').join(' ');
+  }
+  function openKeypad() {
+    keypadInput = '';
+    $('keypad-info').textContent = '輸入備援密碼';
+    renderKeypad();
+    setMode('keypad');
+  }
+  function keypadDigit(d) {
+    if (keypadInput.length < (LEVEL.exitCode || '').length) {
+      keypadInput += d;
+      audio.play('typewriter');
+      renderKeypad();
+      if (keypadInput.length === LEVEL.exitCode.length) submitKeypad();
+    }
+  }
+  function submitKeypad() {
+    if (keypadInput === LEVEL.exitCode) {
+      audio.play('reload');
+      $('keypad').style.display = 'none';
+      chapterEnd();
+    } else {
+      audio.play('locked');
+      renderer.shake(0.08);
+      $('keypad-info').textContent = '密碼錯誤——再想想「那個時刻」';
+      keypadInput = '';
+      renderKeypad();
+    }
+  }
+  function closeKeypad() {
+    $('keypad').style.display = 'none';
+    setMode('play');
+  }
+
   function setMode(m) {
     mode = m;
     $('title').style.display = m === 'title' ? 'flex' : 'none';
     $('difficulty').style.display = m === 'difficulty' ? 'flex' : 'none';
     $('story').style.display = m === 'story' ? 'flex' : 'none';
     $('help').style.display = m === 'help' ? 'flex' : 'none';
+    $('keypad').style.display = m === 'keypad' ? 'flex' : 'none';
     $('pause').style.display = m === 'paused' ? 'flex' : 'none';
     // 觸控層（含覆蓋全螢幕的視角滑動區）只在遊戲進行中顯示，否則會攔截章末/選單按鈕點擊
     const _tui = $('touch-ui');
@@ -798,6 +839,17 @@ function boot() {
       if (a.interact || a.fire || input.consumePressed('Escape')) closeDocument();
       return;
     }
+    if (mode === 'keypad') {
+      input.consumeLook();
+      input.consumeMouseJust(0);
+      for (let d = 0; d <= 9; d++) {
+        if (input.consumePressed('Digit' + d) || input.consumePressed('Numpad' + d)) keypadDigit(String(d));
+      }
+      if (input.consumePressed('Backspace')) { keypadInput = keypadInput.slice(0, -1); renderKeypad(); }
+      if (input.consumePressed('Enter')) submitKeypad();
+      if (input.consumePressed('Escape') || input.consumePressed('Tab')) closeKeypad();
+      return;
+    }
     if (mode === 'dialog') {
       const a = input.actions();
       if (a.interact || a.fire) advanceDialog();
@@ -989,11 +1041,15 @@ function boot() {
         setMode('typewriter');
       } else if (door) {
         if (door.lock === 'chapterExit') {
-          const need = LEVEL.exitNeeds;
-          if (!need || inventory.keyItems.includes(need)) chapterEnd();
-          else {
-            audio.play('locked');
-            hintFlash(LEVEL.exitHint || `需要「${world.lockNames[need] ?? need}」才能離開`, 3.5);
+          if (LEVEL.exitCode) {
+            openKeypad(); // 密碼盤解謎
+          } else {
+            const need = LEVEL.exitNeeds;
+            if (!need || inventory.keyItems.includes(need)) chapterEnd();
+            else {
+              audio.play('locked');
+              hintFlash(LEVEL.exitHint || `需要「${world.lockNames[need] ?? need}」才能離開`, 3.5);
+            }
           }
         } else if (door.lock && inventory.keyItems.includes(door.lock)) {
           world.doors.get(door.id).lock = null;
@@ -1024,7 +1080,7 @@ function boot() {
     } else if (typewriter) {
       hint('按 E 使用打字機');
     } else if (door) {
-      if (door.lock === 'chapterExit') hint('按 E 離開廠區');
+      if (door.lock === 'chapterExit') hint(LEVEL.exitCode ? '按 E 輸入密碼' : '按 E 離開廠區');
       else if (door.lock && inventory.keyItems.includes(door.lock)) hint(`按 E 使用「${world.lockNames[door.lock] ?? door.lock}」`);
       else if (door.lock) hint(`上鎖了——需要「${world.lockNames[door.lock] ?? door.lock}」`);
       else hint(door.open ? '按 E 關門' : '按 E 開門');

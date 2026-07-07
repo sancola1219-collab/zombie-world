@@ -232,6 +232,36 @@ html, body {
   50% { opacity: 0.55; }
 }
 
+/* 密碼盤解謎 */
+#keypad-display {
+  font-size: 40px;
+  letter-spacing: 10px;
+  color: #e8c860;
+  margin: 10px 0 4px;
+  font-family: monospace;
+}
+#keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  gap: 10px;
+  justify-content: center;
+  margin: 16px auto 6px;
+}
+.kp-btn {
+  pointer-events: auto;
+  width: 64px;
+  height: 56px;
+  font: inherit;
+  font-size: 22px;
+  color: #d8d4c8;
+  background: #1f2129;
+  border: 1px solid #4a4438;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.kp-btn:hover { background: #2e3140; border-color: #8a7a55; }
+.kp-btn.kp-fn { font-size: 15px; letter-spacing: 1px; color: #a89878; }
+
 #chapend-rank {
   font-size: 96px;
   font-weight: 700;

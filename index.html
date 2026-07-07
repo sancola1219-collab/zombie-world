@@ -63,7 +63,7 @@
 <div id="vignette"></div>
 <div id="fx-vignette"></div>
 <div id="grain"></div>
-<div id="buildtag">v3.1.0</div>
+<div id="buildtag">v3.2.0</div>
 <div id="touch-ui" style="display:none">
   <div id="look-zone"></div>
   <div id="stick"><div id="stick-knob"></div></div>
@@ -142,6 +142,28 @@
     <p class="tip">點擊或按 E 繼續．Esc 跳過</p>
   </div>
 </div>
+<div id="keypad" class="overlay" style="display:none">
+  <div class="panel">
+    <h2>大門備援密碼</h2>
+    <div id="keypad-display">＿ ＿ ＿ ＿</div>
+    <p class="tip" id="keypad-info">輸入備援密碼</p>
+    <div id="keypad-grid">
+      <button class="kp-btn" data-code="Digit1">1</button>
+      <button class="kp-btn" data-code="Digit2">2</button>
+      <button class="kp-btn" data-code="Digit3">3</button>
+      <button class="kp-btn" data-code="Digit4">4</button>
+      <button class="kp-btn" data-code="Digit5">5</button>
+      <button class="kp-btn" data-code="Digit6">6</button>
+      <button class="kp-btn" data-code="Digit7">7</button>
+      <button class="kp-btn" data-code="Digit8">8</button>
+      <button class="kp-btn" data-code="Digit9">9</button>
+      <button class="kp-btn kp-fn" data-code="Backspace">←</button>
+      <button class="kp-btn" data-code="Digit0">0</button>
+      <button class="kp-btn kp-fn" data-code="Escape">離開</button>
+    </div>
+    <p class="tip no-touch">數字鍵輸入．Enter 確認．Esc 離開</p>
+  </div>
+</div>
 <div id="help" class="overlay" style="display:none">
   <div class="panel">
     <h2>操作說明</h2>
@@ -169,7 +191,7 @@
     <p>你的瀏覽器不支援 WebGL，無法執行本遊戲。</p>
   </div>
 </div>
-<script type="module" src="./js/main.js?v=310" id="zw-entry"></script>
+<script type="module" src="./js/main.js?v=320" id="zw-entry"></script>
 <script>
 // 載入看門狗（傳統 script，舊瀏覽器也會執行）：
 // module 匯入鏈（含 three CDN）任一環節失敗時 boot() 不會跑，
