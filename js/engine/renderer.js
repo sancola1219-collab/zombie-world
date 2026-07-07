@@ -15,6 +15,7 @@ import {
   buildSpiderMesh,
   buildCreeperMesh,
   buildBloaterMesh,
+  buildMutantMesh,
   buildPrimeMesh,
 } from './meshes.js';
 
@@ -26,6 +27,7 @@ const ENEMY_BUILDERS = {
   spider: buildSpiderMesh,
   creeper: buildCreeperMesh,
   bloater: buildBloaterMesh,
+  mutant: buildMutantMesh,
   prime: buildPrimeMesh,
 };
 

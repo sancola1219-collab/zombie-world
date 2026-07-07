@@ -19,10 +19,11 @@ import { Lurker } from './game/enemies/lurker.js';
 import { Spider } from './game/enemies/spider.js';
 import { Creeper } from './game/enemies/creeper.js';
 import { Bloater } from './game/enemies/bloater.js';
+import { Mutant } from './game/enemies/mutant.js';
 import { Prime } from './game/enemies/prime.js';
 import { separateEnemies } from './game/enemies/base.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, prime: Prime };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, mutant: Mutant, prime: Prime };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
@@ -178,6 +179,7 @@ function boot() {
   let lastHint = null;
   let everLocked = false;
   let hintOverride = null; // {text, t}
+  let monoT = 0; // 內心獨白剩餘顯示秒數（邏輯時鐘）
   let difficulty = 'standard';
   let bossDone = false;
   let countdownLeft = -1; // >0 表示自毀倒數進行中（邏輯時鐘）
@@ -206,6 +208,12 @@ function boot() {
 
   function hintFlash(text, seconds = 1.4) {
     hintOverride = { text, t: seconds };
+  }
+
+  // 內心獨白：斜體、螢幕中下，比提示更持久（心理戲氛圍）
+  function showMonologue(text, seconds = 6) {
+    $('monologue').textContent = text;
+    monoT = seconds;
   }
 
   function setMode(m) {
@@ -336,6 +344,7 @@ function boot() {
       if (trg.room !== roomId || firedTriggers.has(trg.id)) continue;
       firedTriggers.add(trg.id);
       hintFlash(trg.text, 3.6);
+      if (trg.monologue) showMonologue(trg.monologue, 6); // 周亮均的內心獨白
       if (trg.sound) audio.play(trg.sound);
       if (trg.shake) renderer.shake(trg.shake);
       if (trg.alert) {
@@ -1055,6 +1064,13 @@ function boot() {
         die();
         return;
       }
+    }
+
+    // 內心獨白淡出（邏輯時鐘，獨立於 hint）
+    if (monoT > 0) {
+      monoT -= dt;
+      $('monologue').style.opacity = String(Math.min(1, monoT * 1.5)); // 最後 0.67s 淡出
+      if (monoT <= 0) $('monologue').textContent = '';
     }
 
     audio.setHeartbeat(player.healthTier());

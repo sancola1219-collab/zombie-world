@@ -1,173 +1,162 @@
-// 第二章〈地下的東西〉：柳營新廠 B1 儲運層。
-// 延續第一章：KY-02 被運往 B1，警衛無線電「不要下去」。周亮均決定下去查明真相。
+// 第二章〈KY添加劑〉：停電當晚的柳營新廠。使用者原著劇情。
+// 周亮均逃到警衛室卻發現封廠、欣儀在品保實驗室求救——只能折返，
+// 追查 E 區黑色滲液、KY 真相，對抗第一隻 KY 變異體，帶著證據逃出。
+// 內心獨白（monologue）＝周亮均喃喃自語的不安，用觸發器承載、以斜體呈現。
 export const CHAPTER2 = {
   id: 'chapter2',
-  name: '第二章：地下的東西',
+  name: '第二章：KY添加劑',
   next: 'chapter3',
-  exitNeeds: 'labkey',
-  spawn: { x: 2, z: 2.5, yaw: -Math.PI / 2 }, // 貨梯底，面向東
-  lockNames: { labkey: '實驗區通行卡', chapterExit: '實驗區閘門' },
+  exitNeeds: 'evidence',
+  exitHint: '沒有證據就這樣逃出去，沒有人會相信——欣儀說品保實驗室裡有他們真正的導入計畫',
+  spawn: { x: 2, z: 1.5, yaw: Math.PI / 2 }, // 廠務走廊西端，面向東
+  lockNames: { fireext: '滅火器', evidence: 'KY 導入證據', chapterExit: '安全梯' },
   story: [
-    '大門在身後合上。雨水打在臉上，周亮均這輩子沒有覺得雨這麼乾淨過。\n\n手機沒有訊號。整個柳營工業區一片漆黑，只有遠處國道上偶爾掃過的車燈。',
-    '無線電忽然響了。是欣儀。\n\n「亮均——我在監控室。你先聽我說完。白博士的車還停在貨運月台，可是監視器裡……B1 儲運層的燈全滅了，畫面裡有東西在動。不是人的動法。」',
-    '「KY-02 還在下面。」她的聲音壓得很低，「如果那批東西流出廠區，就不只是柳營的事了。」\n\n周亮均看著手裡的貨梯鑰匙卡，雨聲像無數手指在敲門。\n\n他轉身走回貨梯。按下了「B1」。',
-    '貨梯下降。燈管在頭頂閃爍。\n\n越往下，空氣越冷，混著機油、消毒水，和一絲若有似無的——甜腐味。\n\n叮。\n\n門開了。黑暗裡，有什麼東西泛著淡淡的藍光。',
+    '警衛室的大門在眼前緩緩落下。\n\n保全柵欄降到一半，卡住了——但那道縫，已經窄到人鑽不出去。\n\n停車場旁，幾輛晨星工業的黑色廂型車正駛入廠區。\n\n周亮均盯著那些車，忽然懂了總經理廣播的意思。\n\n「封閉管理」不是為了保護誰。是為了不讓任何東西——任何人——離開。',
+    '對講機在腰間響起，是欣儀，聲音壓得極低。\n\n「亮均……我在 B 棟品保實驗室。那個助理變了，他咬了人，往醫護室跑了。我手上有 KY 真正的導入計畫，三週前就混進清洗流程了——反應槽、廢液桶，可能全污染了。」\n\n背景傳來一聲金屬托盤落地的巨響，然後是壓抑的尖叫。\n\n「欣儀？欣儀！」\n\n只剩雜訊。',
+    '周亮均轉身，往廠區裡跑。\n\n（走不了。門封了，訊號斷了，連我的門禁權限都被停用了。）\n\n（可是欣儀還在裡面。而且如果她說的是真的——這東西已經進了管線三週，那停電、那灘黑色液體，全都說得通了。）\n\n（那不是外洩。是系統回流。整座廠，早就是一個培養皿。）\n\n他握緊手裡的手電筒。\n\n目標只有一個：到 B 棟品保實驗室，找到欣儀，帶著證據活著出去。',
   ],
-  objective: '查明 KY-02 下落，找到進入實驗區的通行卡',
+  objective: '穿過廠區到 B 棟品保實驗室，找到林欣儀',
   rooms: [
-    { id: 'b1lift', name: '貨梯底', x: 0, z: 0, w: 4, d: 5, h: 3, floor: 'metal', walls: 'metal',
-      light: { x: 2, y: 2.6, z: 2.5, color: 0xffe0b0, intensity: 22, flicker: true } },
-    { id: 'b1hall', name: '儲運月台', x: 4, z: 0, w: 16, d: 10, h: 4.5, floor: 'tile', walls: 'metal',
-      light: { x: 12, y: 4, z: 5, color: 0x66ffee, intensity: 26, flicker: true } }, // KY 藍光
-    { id: 'coldroom', name: '冷藏庫', x: 4, z: 10, w: 6, d: 6, h: 3.2, floor: 'metal', walls: 'metal',
-      light: { x: 7, y: 2.8, z: 13, color: 0xaaccff, intensity: 14, flicker: true } },
-    { id: 'storage', name: '化學品倉', x: 10, z: 10, w: 10, d: 8, h: 3.6, floor: 'tile', walls: 'metal',
-      light: { x: 15, y: 3.2, z: 14, color: 0xffd9a0, intensity: 24 } },
-    { id: 'barracks', name: '值勤室', x: 20, z: 10, w: 6, d: 5, h: 3, floor: 'carpet', walls: 'plaster',
-      light: { x: 23, y: 2.6, z: 12.5, color: 0xffe0b0, intensity: 30 } },
-    { id: 'tunnel', name: '輸送隧道', x: 20, z: 3.5, w: 20, d: 3, h: 2.8, floor: 'metal', walls: 'metal',
-      light: { x: 30, y: 2.4, z: 5, color: 0xc09060, intensity: 16, flicker: true } },
-    { id: 'pumproom', name: '泵房', x: 40, z: 2, w: 6, d: 6, h: 3.2, floor: 'metal', walls: 'metal',
-      light: { x: 43, y: 2.8, z: 5, color: 0x88aa88, intensity: 20, flicker: true } },
-    { id: 'sump', name: '集水坑', x: 40, z: 8, w: 8, d: 6, h: 3, floor: 'metal', walls: 'metal',
-      light: { x: 44, y: 2.6, z: 11, color: 0x66aa88, intensity: 12, flicker: true } },
-    { id: 'lablock', name: '實驗區閘門廳', x: 46, z: 2, w: 6, d: 5, h: 3.4, floor: 'tile', walls: 'metal',
-      light: { x: 49, y: 3, z: 4.5, color: 0xff5533, intensity: 18, flicker: true } },
+    { id: 'corr', name: '廠務走廊', x: 0, z: 0, w: 22, d: 3, h: 2.8, floor: 'tile', walls: 'plaster',
+      light: { x: 11, y: 2.4, z: 1.5, color: 0x8fd0a0, intensity: 16, flicker: true } }, // 緊急照明淡綠
+    { id: 'eroom', name: 'E區電氣室', x: 0, z: 3, w: 6, d: 6, h: 3.2, floor: 'metal', walls: 'metal',
+      light: { x: 3, y: 3, z: 6, color: 0x66ffaa, intensity: 12, flicker: true } }, // KY 藍綠光
+    { id: 'storage', name: '原料暫存區', x: 6, z: 3, w: 7, d: 8, h: 3.6, floor: 'tile', walls: 'metal',
+      light: { x: 9.5, y: 3.2, z: 7, color: 0xffd9a0, intensity: 22, flicker: true } },
+    { id: 'qalab', name: 'B棟品保實驗室', x: 13, z: 3, w: 9, d: 9, h: 3.4, floor: 'tile', walls: 'plaster',
+      light: { x: 17.5, y: 3, z: 7.5, color: 0x9fc4ff, intensity: 20, flicker: true } }, // 儀器冷光
+    { id: 'medbay', name: '醫護室', x: 22, z: 0, w: 6, d: 6, h: 3, floor: 'tile', walls: 'plaster',
+      light: { x: 25, y: 2.6, z: 3, color: 0xffe0b0, intensity: 24, flicker: true } },
+    { id: 'fireexit', name: '安全梯', x: 22, z: 6, w: 6, d: 5, h: 4, floor: 'metal', walls: 'metal',
+      light: { x: 25, y: 3.6, z: 8.5, color: 0xaaccee, intensity: 26 } },
   ],
   doors: [
-    { id: 'd2-lift-hall', from: 'b1lift', to: 'b1hall', axis: 'z', at: [4, 2.5], width: 1.4, height: 2.3, lock: null },
-    { id: 'd2-hall-cold', from: 'b1hall', to: 'coldroom', axis: 'x', at: [7, 10], width: 1.2, height: 2.2, lock: null },
-    { id: 'd2-hall-storage', from: 'b1hall', to: 'storage', axis: 'x', at: [15, 10], width: 1.4, height: 2.4, lock: null },
-    { id: 'd2-cold-storage', from: 'coldroom', to: 'storage', axis: 'z', at: [10, 13], width: 1.1, height: 2.1, lock: null },
-    { id: 'd2-storage-barracks', from: 'storage', to: 'barracks', axis: 'z', at: [20, 12.5], width: 1.1, height: 2.1, lock: null },
-    { id: 'd2-hall-tunnel', from: 'b1hall', to: 'tunnel', axis: 'z', at: [20, 5], width: 1.4, height: 2.3, lock: null },
-    { id: 'd2-tunnel-pump', from: 'tunnel', to: 'pumproom', axis: 'z', at: [40, 5], width: 1.2, height: 2.2, lock: null },
-    { id: 'd2-pump-sump', from: 'pumproom', to: 'sump', axis: 'x', at: [43, 8], width: 1.2, height: 2.2, lock: null },
-    { id: 'd2-pump-lab', from: 'pumproom', to: 'lablock', axis: 'z', at: [46, 4.5], width: 1.3, height: 2.3, lock: 'labkey' },
-    { id: 'd2-exit', from: 'lablock', to: null, axis: 'z', at: [52, 4.5], width: 1.5, height: 2.4, lock: 'chapterExit' },
+    { id: 'd2-corr-eroom', from: 'corr', to: 'eroom', axis: 'x', at: [3, 3], width: 1.2, height: 2.2, lock: null },
+    { id: 'd2-corr-storage', from: 'corr', to: 'storage', axis: 'x', at: [9, 3], width: 1.3, height: 2.2, lock: null },
+    { id: 'd2-corr-qalab', from: 'corr', to: 'qalab', axis: 'x', at: [17, 3], width: 1.3, height: 2.3, lock: 'fireext' }, // 門禁停權→滅火器砸開
+    { id: 'd2-corr-medbay', from: 'corr', to: 'medbay', axis: 'z', at: [22, 1.5], width: 1.2, height: 2.2, lock: null },
+    { id: 'd2-medbay-fireexit', from: 'medbay', to: 'fireexit', axis: 'x', at: [25, 6], width: 1.2, height: 2.2, lock: null },
+    { id: 'd2-exit', from: 'fireexit', to: null, axis: 'x', at: [25, 11], width: 1.4, height: 2.4, lock: 'chapterExit' },
   ],
   props: [
-    // 儲運月台：KY-02 破損箱（中央事發點）＋棧板木箱
-    { room: 'b1hall', type: 'crate', x: 11.5, z: 4.6, solid: 0.4 },
-    { room: 'b1hall', type: 'crate', x: 12.4, z: 5.3, solid: 0.4 },
-    { room: 'b1hall', type: 'blood', x: 12, z: 5.8 },
-    { room: 'b1hall', type: 'blood', x: 13.2, z: 4.2 },
-    { room: 'b1hall', type: 'bodybag', x: 10.6, z: 6.2, rot: 0.8 },
-    { room: 'b1hall', type: 'barrel', x: 5.5, z: 1.2, solid: 0.35 },
-    { room: 'b1hall', type: 'barrel', x: 6.3, z: 1.5, solid: 0.35 },
-    { room: 'b1hall', type: 'crate', x: 18.5, z: 8.5, solid: 0.4 },
-    { room: 'b1hall', type: 'papers', x: 14, z: 7 },
-    { room: 'b1hall', type: 'pipe', x: 12, z: 0.6, len: 15, y: 4.2 },
-    // 冷藏庫
-    { room: 'coldroom', type: 'shelf', x: 4.35, z: 12, rot: Math.PI / 2, solid: 0.28 },
-    { room: 'coldroom', type: 'shelf', x: 4.35, z: 14.5, rot: Math.PI / 2, solid: 0.28 },
-    { room: 'coldroom', type: 'bodybag', x: 8, z: 14.8, rot: 1.5 },
-    { room: 'coldroom', type: 'blood', x: 7.6, z: 14 },
-    // 化學品倉：貨架迷宮
-    { room: 'storage', type: 'shelf', x: 12, z: 12, rot: 0, solid: 0.3 },
-    { room: 'storage', type: 'shelf', x: 15, z: 12, rot: 0, solid: 0.3 },
-    { room: 'storage', type: 'shelf', x: 12, z: 15.5, rot: 0, solid: 0.3 },
-    { room: 'storage', type: 'shelf', x: 15, z: 15.5, rot: 0, solid: 0.3 },
-    { room: 'storage', type: 'barrel', x: 18.8, z: 16.8, solid: 0.35 },
-    { room: 'storage', type: 'barrel', x: 18.1, z: 17.2, solid: 0.35 },
-    { room: 'storage', type: 'papers', x: 17, z: 11 },
-    // 值勤室
-    { room: 'barracks', type: 'table', x: 23, z: 11.5, solid: 0.5 },
-    { room: 'barracks', type: 'chair_fallen', x: 24.3, z: 13.5, rot: 2.2 },
-    { room: 'barracks', type: 'papers', x: 22, z: 13.8 },
-    // 輸送隧道：輸送帶（連續木箱）＋管線
-    { room: 'tunnel', type: 'pipe', x: 30, z: 4, len: 19, y: 2.5 },
-    { room: 'tunnel', type: 'crate', x: 26, z: 6, solid: 0.4 },
-    { room: 'tunnel', type: 'crate', x: 31, z: 4.2, solid: 0.4 },
-    { room: 'tunnel', type: 'blood', x: 33, z: 5 },
-    { room: 'tunnel', type: 'bodybag', x: 36, z: 4.4, rot: 0.2 },
-    // 泵房
-    { room: 'pumproom', type: 'barrel', x: 41.2, z: 3, solid: 0.35 },
-    { room: 'pumproom', type: 'barrel', x: 42, z: 3.4, solid: 0.35 },
-    { room: 'pumproom', type: 'pipe', x: 43, z: 2.5, len: 5, y: 2.8 },
-    // 集水坑：毒沼氛圍
-    { room: 'sump', type: 'blood', x: 43, z: 11 },
-    { room: 'sump', type: 'blood', x: 45.5, z: 12.5 },
-    { room: 'sump', type: 'bodybag', x: 46.5, z: 10.5, rot: 2.6 }, // 白博士的助理
-    { room: 'sump', type: 'barrel', x: 41, z: 13, solid: 0.35 },
-    // 閘門廳
-    { room: 'lablock', type: 'crate', x: 47, z: 6.2, solid: 0.4 },
-    { room: 'lablock', type: 'blood', x: 49.5, z: 4 },
+    // 廠務走廊：翻倒推車、散落文件、血跡
+    { room: 'corr', type: 'chair_fallen', x: 5, z: 1, rot: 1.2 },
+    { room: 'corr', type: 'papers', x: 8, z: 2 },
+    { room: 'corr', type: 'blood', x: 13, z: 1.5 },
+    { room: 'corr', type: 'crate', x: 20, z: 0.8, solid: 0.4 },
+    { room: 'corr', type: 'pipe', x: 11, z: 0.5, len: 20, y: 2.5 },
+    // E區電氣室：黑色滲液現場（用血跡代表黑色液體）、機櫃
+    { room: 'eroom', type: 'blood', x: 3, z: 8 },
+    { room: 'eroom', type: 'blood', x: 2, z: 6.5 },
+    { room: 'eroom', type: 'blood', x: 4.2, z: 7 },
+    { room: 'eroom', type: 'crate', x: 1, z: 4, solid: 0.4 },
+    { room: 'eroom', type: 'barrel', x: 5, z: 4.2, solid: 0.35 },
+    { room: 'eroom', type: 'pipe', x: 3, z: 3.6, len: 5, y: 2.9 },
+    // 原料暫存區：桶陣、置物架（滅火器在這）
+    { room: 'storage', type: 'barrel', x: 7.5, z: 5, solid: 0.35 },
+    { room: 'storage', type: 'barrel', x: 8.4, z: 5.4, solid: 0.35 },
+    { room: 'storage', type: 'barrel', x: 7.9, z: 6.3, solid: 0.35 },
+    { room: 'storage', type: 'shelf', x: 12.6, z: 6, rot: -Math.PI / 2, solid: 0.28 },
+    { room: 'storage', type: 'crate', x: 11, z: 9.5, solid: 0.4 },
+    { room: 'storage', type: 'papers', x: 9, z: 9 },
+    // 品保實驗室：工作台、抽風櫃、樣品桌、拖拽血痕
+    { room: 'qalab', type: 'table', x: 16, z: 5, solid: 0.5 },
+    { room: 'qalab', type: 'table', x: 20, z: 9, rot: 0.3, solid: 0.5 },
+    { room: 'qalab', type: 'shelf', x: 21.6, z: 6, rot: -Math.PI / 2, solid: 0.28 },
+    { room: 'qalab', type: 'blood', x: 18, z: 7 }, // 拖拽痕
+    { room: 'qalab', type: 'blood', x: 19.5, z: 8.5 },
+    { room: 'qalab', type: 'bodybag', x: 14.5, z: 10.5, rot: 0.5 },
+    { room: 'qalab', type: 'papers', x: 16, z: 5.2 },
+    // 醫護室：病床、翻倒器材、血
+    { room: 'medbay', type: 'chair_fallen', x: 24, z: 2, rot: 2.1 },
+    { room: 'medbay', type: 'blood', x: 25, z: 3.5 },
+    { room: 'medbay', type: 'bodybag', x: 26.5, z: 4.5, rot: 1.1 }, // 被咬的護理師
+    { room: 'medbay', type: 'papers', x: 23.5, z: 4 },
+    // 安全梯
+    { room: 'fireexit', type: 'crate', x: 23, z: 9.5, solid: 0.4 },
+    { room: 'fireexit', type: 'blood', x: 25, z: 8 },
   ],
   documents: [
     {
-      id: 'doc2-manifest', title: '運輸單（乙案）', x: 13.5, z: 6.5,
-      text: '品名：KY-02 樣本組（×6）\n路線：貨梯 → B1 儲運層 → 輸送隧道 → 泵房側門 → 場外車輛\n\n備註欄蓋著紅章：「中止。樣本狀態異常。等待白博士指示。」\n\n六個容器。月台上的破箱……只有一個。',
+      id: 'g2-doc-sds', title: 'KY-01 安全資料表（僅一頁）', x: 3, z: 5,
+      text: '品名：KY-01 製程穩定化輔助液\n供應商：晨星工業\n成分：機密\n毒理：機密\n\n（整頁只有這幾行有字。頁腳被人用原子筆重重寫下一句：）\n\n「這種東西不該靠近電氣室。是誰把它藏進來的？」',
     },
     {
-      id: 'doc2-coldnote', title: '冷藏庫溫度紀錄', x: 5.2, z: 11,
-      text: '18:00　-18.2°C　正常\n19:00　-17.9°C　正常\n20:00　-9.4°C　（手寫）壓縮機沒壞。是裡面的東西在發熱。\n21:00　（空白）\n\n紀錄表的最後一格，畫了一個歪歪扭扭的門，門上打了一個叉。',
+      id: 'g2-doc-camlog', title: 'E區監視器維護單', x: 4.5, z: 8,
+      text: '斷訊時間：停電前 7 分鐘\n維護人員：（空白）\n事由：（空白）\n\n（周亮均盯著這張單子——）\n\n（停電前七分鐘。太準了。準到不像事故。是有人先關了眼睛，才開始動手。）',
     },
     {
-      id: 'doc2-duty', title: 'B1 值勤日誌', x: 22, z: 11.3,
-      text: '20:05 晨星的人到月台，六箱。他們自己搬，不讓我們碰。\n20:30 搬到第三箱的時候箱子晃了一下。是箱子自己在晃。\n20:41 白博士到場。他們吵起來了，說什麼「活性超標」「必須銷毀」。\n20:58 燈滅了。\n\n（下面是另一種筆跡）\n誰看到這本日誌：不要相信穿黑衣服的。他們把人鎖在冷藏庫裡。',
+      id: 'g2-doc-pipeline', title: '管線鈍化測試紀錄（三週前）', x: 9, z: 9.2,
+      text: '測試項目：清洗流程管線鈍化\n導入藥劑：KY-01（稀釋）\n範圍：反應槽 → 清洗水 → 廢液暫存桶\n\n（欣儀說得沒錯。KY 不是今天才進廠。）\n\n（三週。它在管線裡走了三週。反應槽、排水、廢氣洗滌塔……我們喝的、呼吸的、踩過的，全都可能有。）\n\n（E 區那灘黑色液體不是外洩。是它回家了。）',
     },
     {
-      id: 'doc2-bai', title: '白博士的錄音筆記（謄寫）', x: 44.8, z: 3.2,
-      text: '「……KY 系列不是添加劑，從來都不是。它是載體。01 是穩定版本，02 是……02 不應該離開實驗區。」\n\n「聚合體對生物電訊號有趨性。斷電之後它們會安靜，但只要有活體靠近——」\n\n「是我的錯。我以為產線的規模可以稀釋它。」\n\n錄音到這裡被掐斷。',
+      id: 'g2-doc-xinyi', title: '林欣儀的手寫筆記', x: 18.5, z: 5, grantsKey: 'evidence',
+      text: 'KY-01 並非單純添加劑。疑似含有可反應性生物載體。\n外瓶殘留物接觸皮膚後，出現黑色壞死斑。\n樣品在 37°C 環境下活性明顯上升。\n接觸血液後發生快速增殖反應。\n\n（最後一行字寫得很急，筆跡幾乎劃破紙面——）\n\n「這不是製程材料，是病毒。」\n\n（他們不是在做量產。他們是拿整座工廠當培養皿。這張紙，就是證據。收好。）',
     },
     {
-      id: 'doc2-lastorder', title: '晨星緊急指令', x: 48, z: 5.8,
-      text: '致 B1 全體執行人員：\n\n即刻放棄回收作業。實驗區閘門將於 21:30 落鎖。\n\n持通行卡者依丙案自行撤離。其餘人員……\n\n（後半頁被撕掉了。地上有半張碎片，只看得到四個字）\n\n「不予回收」。',
+      id: 'g2-doc-order', title: '晨星內部指令（撕去半頁）', x: 26.5, z: 4.8,
+      text: '致 E 區回收小組：\n\n材料穩定性偏差已進入不可控階段。即刻封鎖現場，回收所有殘留物。\n\n（後半頁被撕掉了。地上的碎片只剩四個字——）\n\n「一併……處理。」\n\n（處理現場。處理殘留物。處理……看到的人。）',
     },
   ],
-  npcs: [],
+  npcs: [
+    {
+      id: 'xinyi',
+      name: '林欣儀',
+      x: 20, z: 9.2, yaw: Math.PI, room: 'qalab',
+      dialog: [
+        '（欣儀倒在冷藏櫃旁，左臂一道傷口，臉色蒼白但意識清楚）\n亮均……你怎麼進來的？門禁不是被停了嗎？',
+        '那個助理……不是人了。晨星的人把他帶進來要做血液檢測，他突然抽搐，然後咬斷了其中一個人的喉嚨。',
+        '樣品桌上那瓶 KY-01——你看到它發藍光了嗎？剛才那東西本來要撲我，一看到瓶子就停了。它不是失去理智……它是在找 KY。病毒在驅使宿主回到源頭。',
+        '我的筆記在桌上，拿走。那是唯一能證明他們拿工廠當培養皿的東西。沒有它，我們就算逃出去，也只是兩個瘋子在亂講話。',
+        '扶我起來。安全梯在醫護室後面……但那東西還在附近。動作快，別碰任何發藍光的東西。',
+      ],
+      dialogAfter: '（欣儀按著手臂）別管我了，先確認證據在你身上。走安全梯。',
+      gift: [
+        { item: 'green_herb', count: 1 },
+        { item: 'handgun_ammo', count: 15 },
+      ],
+    },
+  ],
   triggers: [
-    { id: 't2-hall', room: 'b1hall', text: 'KY-02 的貨箱破了——藍光正從裂縫裡滲出來，像在呼吸。', sound: 'groan', alert: true, shake: 0.08 },
-    { id: 't2-cold', room: 'coldroom', text: '冷藏庫的門是從外面鎖上的。裡面的溫度計停在 -9°C。', sound: 'locked' },
-    { id: 't2-tunnel', room: 'tunnel', text: '輸送帶上的東西……在動。', sound: 'groan', alert: true },
-    { id: 't2-sump', room: 'sump', text: '水聲。黑色的水面下，有什麼東西正貼著池底移動。', alert: true },
-    { id: 't2-lablock', room: 'lablock', text: '閘門上的警示燈還亮著：「實驗區——生物危害等級 4」。', shake: 0.06 },
+    { id: 'g2-t-corr', room: 'corr', text: '緊急照明一盞盞亮起，淡綠色的光讓整條走廊像一具剛從水裡撈上來的屍體。',
+      monologue: '（十三分鐘才接上備用電源。這停電，停得太乾淨了。）' },
+    { id: 'g2-t-eroom', room: 'eroom', text: 'E區電氣室——黑色液體從機櫃縫隙滲出，表面泛著極淡的藍光，像有生命一樣沿地面爬。',
+      sound: 'groan', shake: 0.06, monologue: '（添加劑不該出現在電氣室。除非有人在裡面做了不該做的事。）' },
+    { id: 'g2-t-storage', room: 'storage', text: '原料暫存區。牆邊掛著一具滅火器——玻璃門禁擋在品保實驗室前，也許用得上。',
+      monologue: '（我的權限被切了。白博士說得對——出事時，扛責任的從來不是最有權力的人。）' },
+    { id: 'g2-t-qalab', room: 'qalab', text: '空氣裡有消毒水、鐵鏽、腐肉，還混著淡淡的甜味。樣品桌上，半瓶 KY-01 在無人攪拌下，自己形成一道道漩渦。',
+      sound: 'groan', alert: true, shake: 0.08, monologue: '（幽藍色光絲在液體裡游動，像活體神經。這就是他們要藏的東西。）' },
+    { id: 'g2-t-medbay', room: 'medbay', text: '醫護室。牆上噴濺著早已乾涸的血。那個被咬的護理師……不在床上。',
+      sound: 'bite', alert: true },
+    { id: 'g2-t-fireexit', room: 'fireexit', text: '安全梯就在前面。往上是地面層，往下是黑。只要證據在身上——爬上去就是活路。' },
   ],
   entities: {
     pickups: [
-      { id: 'p2-ammo1', item: 'handgun_ammo', count: 15, x: 2, z: 4 },
-      { id: 'p2-herb1', item: 'green_herb', count: 1, x: 3.4, z: 1 },
-      { id: 'p2-shells1', item: 'shotgun_shells', count: 7, x: 18.5, z: 1.5 },
-      { id: 'p2-blue1', item: 'blue_herb', count: 1, x: 8.8, z: 11 },
-      { id: 'p2-spray1', item: 'first_aid_spray', count: 1, x: 9, z: 15 }, // 冷藏庫深處
-      { id: 'p2-smgammo1', item: 'smg_ammo', count: 30, x: 11, z: 17.2 },
-      { id: 'p2-fuel1', item: 'fuel', count: 40, x: 18.8, z: 16 },
-      { id: 'p2-magnum', item: 'magnum_weapon', count: 1, x: 23, z: 11.7 }, // 值勤室槍櫃
-      { id: 'p2-magammo1', item: 'magnum_ammo', count: 6, x: 23.8, z: 11.5 },
-      { id: 'p2-herb2', item: 'green_herb', count: 1, x: 21, z: 14 },
-      { id: 'p2-ammo2', item: 'handgun_ammo', count: 15, x: 28, z: 4.5 },
-      { id: 'p2-shells2', item: 'shotgun_shells', count: 7, x: 37, z: 5.8 },
-      { id: 'p2-red1', item: 'red_herb', count: 1, x: 41.5, z: 6.5 },
-      { id: 'p2-labkey', item: 'labkey', count: 1, x: 46.8, z: 10.8 }, // 助理屍袋旁
-      { id: 'p2-blue2', item: 'blue_herb', count: 1, x: 42, z: 12.5 },
-      { id: 'p2-magammo2', item: 'magnum_ammo', count: 6, x: 47.5, z: 6 },
-      { id: 'p2-herb3', item: 'green_herb', count: 1, x: 50.5, z: 6 },
+      { id: 'g2-p-ammo1', item: 'handgun_ammo', count: 15, x: 2, z: 1.5 },
+      { id: 'g2-p-herb1', item: 'green_herb', count: 1, x: 15, z: 1.5 },
+      { id: 'g2-p-fireext', item: 'fireext', count: 1, x: 12.4, z: 6 }, // 原料暫存區置物架旁——開品保門的關鍵
+      { id: 'g2-p-shells1', item: 'shotgun_shells', count: 7, x: 8, z: 6 },
+      { id: 'g2-p-shotgun', item: 'shotgun_weapon', count: 1, x: 7.6, z: 9.5 },
+      { id: 'g2-p-blue1', item: 'blue_herb', count: 1, x: 5, z: 5 },
+      { id: 'g2-p-ammo2', item: 'handgun_ammo', count: 15, x: 16, z: 9.5 },
+      { id: 'g2-p-shells2', item: 'shotgun_shells', count: 7, x: 21, z: 6 },
+      { id: 'g2-p-spray1', item: 'first_aid_spray', count: 1, x: 24, z: 2 },
+      { id: 'g2-p-herb2', item: 'green_herb', count: 1, x: 26, z: 3.5 },
+      { id: 'g2-p-ammo3', item: 'handgun_ammo', count: 15, x: 23, z: 9 },
     ],
     enemies: [
-      { id: 'c2-z1', type: 'zombie', x: 9, z: 3 },
-      { id: 'c2-z2', type: 'zombie', x: 15, z: 8 },
-      { id: 'c2-z3', type: 'zombie', x: 17.5, z: 3.5 },
-      { id: 'c2-hunter1', type: 'hunter', x: 12, z: 8.5 }, // 月台巡獵
-      { id: 'c2-lurker1', type: 'lurker', x: 7, z: 13 },   // 冷藏庫天花板
-      { id: 'c2-lurker2', type: 'lurker', x: 30, z: 5 },   // 隧道中段
-      { id: 'c2-spider1', type: 'spider', x: 13.5, z: 14 },
-      { id: 'c2-spider2', type: 'spider', x: 16.5, z: 16.5 },
-      { id: 'c2-z4', type: 'zombie', x: 24, z: 13.5 },
-      { id: 'c2-bloater1', type: 'bloater', x: 33, z: 5 },
-      { id: 'c2-bloater2', type: 'bloater', x: 38.5, z: 4.5 },
-      { id: 'c2-z5', type: 'zombie', x: 42.5, z: 4.5 },
-      { id: 'c2-creeper1', type: 'creeper', x: 44.5, z: 12 }, // 守通行卡
-      { id: 'c2-creeper2', type: 'creeper', x: 47, z: 9.5 },
-      { id: 'c2-bloater3', type: 'bloater', x: 41.5, z: 10.5 },
-      { id: 'c2-dog1', type: 'dog', x: 26, z: 4.5 },
-      { id: 'c2-dog2', type: 'dog', x: 49, z: 3.5 },
-      { id: 'c2-z6', type: 'zombie', x: 48.5, z: 5.5 },
+      { id: 'g2-z1', type: 'zombie', x: 15, z: 1.5 }, // 走廊早期感染者
+      { id: 'g2-z2', type: 'zombie', x: 4, z: 6 },    // E區
+      { id: 'g2-z3', type: 'zombie', x: 9, z: 7 },    // 暫存區
+      { id: 'g2-z4', type: 'zombie', x: 10.5, z: 5 },
+      { id: 'g2-mutant', type: 'mutant', x: 18, z: 9 }, // ★ 第一隻 KY 變異體（那個助理）——品保實驗室
+      { id: 'g2-z5', type: 'zombie', x: 24, z: 4 },    // 醫護室（變異的護理師）
+      { id: 'g2-z6', type: 'zombie', x: 25, z: 8.5 },
     ],
     typewriters: [
-      { id: 'tw2-lift', x: 0.7, z: 0.8 },
-      { id: 'tw2-barracks', x: 25.3, z: 14.2 },
+      { id: 'g2-tw-corr', x: 1, z: 2.3 },
+      { id: 'g2-tw-fireexit', x: 26.5, z: 9.5 },
     ],
   },
-  start: { weapons: [{ id: 'handgun', rounds: 15 }, { id: 'shotgun', rounds: 4 }], items: [] },
+  start: { weapons: [{ id: 'handgun', rounds: 15 }], items: [] },
 };

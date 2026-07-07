@@ -427,6 +427,96 @@ export function buildBloaterMesh() {
   return g;
 }
 
+// KY 變異體：初代感染者（1.75m）——還有人形，但右臂黑色壞死腫脹、
+// 皮膚裂縫滲出 KY 藍光、歪頭血口、針孔瞳。感染早期的駭人，不是腐爛的殭屍。
+export function buildMutantMesh() {
+  const g = new THREE.Group();
+  const skin = mat(0xb8a488);        // 病態蒼白膚
+  const skinShade = mat(0x9a8670);
+  const necro = mat(0x2a1c22);       // 黑紫壞死
+  const necroMid = mat(0x4a2c34);
+  const cloth = mat(0x3b4550);       // 撕裂工作服（灰藍）
+  const clothDark = mat(0x2c333c);
+  const blood = mat(0x4a0d0d);
+  const glow = new THREE.MeshBasicMaterial({ color: 0x4ad9c4 }); // KY 藍綠光裂縫
+  const eye = mat(0x0c0c10);
+
+  // 腿（撕裂褲管）
+  const legL = new THREE.Group();
+  legL.position.set(-0.11, 0.86, 0);
+  cap(legL, cloth, 0.062, 0.26, 0, -0.16, 0, -0.05);
+  cap(legL, cloth, 0.05, 0.24, 0, -0.54, 0.03, 0.16);
+  blob(legL, skinShade, 0.05, 1.1, 0.5, 2.1, 0, -0.8, -0.04);
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.11, 0.86, 0);
+  cap(legR, clothDark, 0.062, 0.26, 0, -0.16, 0, -0.05);
+  cap(legR, skin, 0.048, 0.24, 0, -0.54, 0.03, 0.16); // 露膚小腿
+  blob(legR, glow, 0.02, 1, 2, 0.6, 0.02, -0.5, -0.06); // 小腿藍光裂縫
+  blob(legR, skinShade, 0.05, 1.1, 0.5, 2.1, 0, -0.8, -0.04);
+  g.add(legR);
+
+  // 軀幹（前傾攻擊姿態、撕裂工作服）
+  const torso = new THREE.Group();
+  torso.position.y = 0.82;
+  torso.rotation.x = 0.22;
+  blob(torso, clothDark, 0.1, 1.7, 1.0, 1.2, 0, 0.04, 0);
+  blob(torso, cloth, 0.12, 1.7, 1.5, 1.15, 0, 0.5, 0);
+  blob(torso, skin, 0.06, 1.2, 1, 0.8, 0.04, 0.34, -0.11); // 撕裂處露出的腹
+  blob(torso, glow, 0.02, 1, 2.4, 0.5, 0.02, 0.34, -0.155); // 胸腹藍光裂縫
+  box(torso, cloth, 0.09, 0.1, 0.015, -0.13, 0.32, -0.12, 0.1, 0, 0.35); // 破布
+  box(torso, clothDark, 0.08, 0.09, 0.015, 0.14, 0.34, -0.1, 0.1, 0, 0.2);
+  blob(torso, cloth, 0.072, 1, 0.85, 1, -0.235, 0.62, 0);
+  blob(torso, necroMid, 0.078, 1, 0.9, 1, 0.24, 0.6, 0.01); // 右肩已開始壞死
+  cap(torso, skin, 0.048, 0.05, 0.01, 0.72, -0.02, 0.15);
+
+  // 頭（歪向一邊、血口、針孔眼）
+  const head = new THREE.Group();
+  head.position.set(0.02, 0.78, -0.04);
+  head.rotation.z = 0.34; // 歪頭
+  head.rotation.x = 0.1;
+  blob(head, skin, 0.095, 1.0, 1.16, 1.05, 0, 0.06, 0);
+  blob(head, skinShade, 0.075, 1.0, 0.9, 0.88, 0, 0.01, -0.045);
+  blob(head, mat(0x241c14), 0.088, 1.0, 0.5, 1.0, 0, 0.14, 0.01); // 亂髮
+  blob(head, eye, 0.02, 1.5, 1.2, 0.5, -0.04, 0.06, -0.085);      // 眼白（大）
+  blob(head, eye, 0.02, 1.5, 1.2, 0.5, 0.04, 0.06, -0.085);
+  blob(head, mat(0x6a0808), 0.006, 1, 1, 1, -0.04, 0.06, -0.098);  // 針孔紅瞳
+  blob(head, mat(0x6a0808), 0.006, 1, 1, 1, 0.04, 0.06, -0.098);
+  blob(head, mat(0x5a1414), 0.05, 1.0, 0.6, 0.85, 0.01, -0.07, -0.05, 0.55); // 血口
+  box(head, blood, 0.05, 0.11, 0.012, 0.06, -0.03, -0.09, 0, -0.2, 0.15); // 嘴角血
+  torso.add(head);
+
+  // 左臂（正常、緊繃前伸）
+  const armL = new THREE.Group();
+  armL.position.set(-0.24, 0.6, -0.02);
+  armL.rotation.x = 0.1;
+  cap(armL, cloth, 0.052, 0.1, 0, 0, -0.07, Math.PI / 2);
+  cap(armL, skin, 0.042, 0.17, 0, -0.01, -0.23, Math.PI / 2 + 0.06);
+  cap(armL, skin, 0.037, 0.18, 0, -0.05, -0.42, Math.PI / 2 + 0.2);
+  blob(armL, skinShade, 0.035, 1, 0.55, 1.35, 0, -0.09, -0.55, 0.35);
+  torso.add(armL);
+
+  // 右臂（★ 黑色壞死、腫脹、藍光裂縫、爪化）
+  const armR = new THREE.Group();
+  armR.position.set(0.26, 0.6, -0.01);
+  armR.rotation.x = 0.05;
+  cap(armR, necroMid, 0.07, 0.12, 0, -0.02, -0.08, Math.PI / 2); // 腫脹上臂
+  blob(armR, glow, 0.018, 1, 2.5, 0.5, 0, 0, -0.16);            // 藍光裂縫
+  cap(armR, necro, 0.06, 0.2, 0, -0.03, -0.3, Math.PI / 2 + 0.1); // 前臂黑化
+  blob(armR, glow, 0.016, 1, 2.2, 0.5, 0.01, -0.02, -0.4);
+  blob(armR, necro, 0.06, 1, 0.6, 1.3, 0, -0.06, -0.56, 0.3);   // 腫大的手
+  for (const fx of [-0.04, 0, 0.04]) {                          // 黑爪
+    cap(armR, necro, 0.01, 0.07, fx, -0.08, -0.64, 1.15);
+  }
+  torso.add(armR);
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF: armL, armD: armR, torso };
+  g.userData.kind = 'mutant';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
 // 原體：吞噬 KY-02 後成形的聚合體巨物（2.6m）——黑色聚合體＋藍光脈絡＋外露核心
 export function buildPrimeMesh() {
   const g = new THREE.Group();

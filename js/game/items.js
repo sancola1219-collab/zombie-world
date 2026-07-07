@@ -8,6 +8,8 @@ export const ITEMS = {
   blue_herb: { name: '藍色草藥', type: 'heal', stack: 3, desc: '解除中毒' },
   keycard: { name: '貨梯鑰匙卡', type: 'key', desc: '晨星工業的門禁卡，可開啟貨梯' },
   labkey: { name: '實驗區通行卡', type: 'key', desc: '生物危害等級4區域的通行卡' },
+  fireext: { name: '滅火器', type: 'key', desc: '沉甸甸的鋼瓶——門禁停權時，砸開玻璃罩比刷卡快' },
+  evidence: { name: 'KY 導入證據', type: 'key', desc: '林欣儀的手寫筆記——證明晨星拿工廠當培養皿的唯一憑據' },
   magnum_weapon: { name: '麥格農', type: 'weapon', weapon: 'magnum', rounds: 6 },
   handgun_ammo: { name: '手槍彈', type: 'ammo', stack: 45, weapon: 'handgun' },
   shotgun_shells: { name: '霰彈', type: 'ammo', stack: 21, weapon: 'shotgun' },
