@@ -337,6 +337,36 @@ html, body {
   color: #f0e8d8;
 }
 
+/* 語言選擇列（標題／暫停畫面） */
+.lang-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 14px 0 4px;
+  pointer-events: auto;
+}
+.lang-btn {
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #9a968c;
+  background: rgba(26, 28, 36, 0.7);
+  border: 1px solid #3a352c;
+  padding: 5px 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.lang-btn:hover {
+  color: #f0e8d8;
+  border-color: #a3382e;
+}
+.lang-btn.active {
+  color: #f0e8d8;
+  background: #4a2320;
+  border-color: #a3382e;
+}
+
 .story-panel {
   max-width: 620px;
   text-align: left;

@@ -34,6 +34,7 @@ import { CHAPTER2 } from './levels/chapter2.js';
 import { CHAPTER3 } from './levels/chapter3.js';
 import { CHAPTER4 } from './levels/chapter4.js';
 import { STORY1 } from './levels/story1.js';
+import { t, tx, setLang, getLang } from './engine/i18n.js';
 
 const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3, chapter4: CHAPTER4 };
 const PROGRESS_KEY = 'zombie-world-progress';
@@ -68,6 +69,10 @@ function boot() {
   } catch {
     saves = new SaveStore(null);
   }
+  // 語言：讀取記憶的語言（zh/en/de/ja），介面與劇情全部依此切換
+  const LANG_KEY = 'zombie-world-lang';
+  setLang(saves.load(LANG_KEY) || 'zh');
+
   // 章節進度：{ chapter, difficulty, auto }（auto='story' 表示章末銜接直接播開場）
   const progress = saves.load(PROGRESS_KEY) || {};
   if (progress.chapter && CHAPTERS[progress.chapter]) LEVEL = CHAPTERS[progress.chapter];
@@ -231,7 +236,7 @@ function boot() {
   }
   function openKeypad() {
     keypadInput = '';
-    $('keypad-info').textContent = '輸入備援密碼';
+    $('keypad-info').textContent = t('keypad_prompt');
     renderKeypad();
     setMode('keypad');
   }
@@ -251,7 +256,7 @@ function boot() {
     } else {
       audio.play('locked');
       renderer.shake(0.08);
-      $('keypad-info').textContent = '密碼錯誤——再想想「那個時刻」';
+      $('keypad-info').textContent = t('keypad_wrong');
       keypadInput = '';
       renderKeypad();
     }
@@ -274,33 +279,82 @@ function boot() {
     if (_tui && isTouchOnly) _tui.style.display = m === 'play' ? 'block' : 'none';
     if (m === 'paused') {
       $('pause-tip').textContent = isTouchOnly
-        ? '左下搖桿移動（推滿奔跑）．滑動畫面轉視角．右下按鈕互動/跳躍'
-        : (input.dragMode ? '按住滑鼠拖曳調整視角' : '點擊畫面鎖定視角') +
-          '．WASD 移動．Shift 奔跑．空白鍵 跳躍．E 互動．Esc 暫停';
+        ? t('move_hint_touch')
+        : input.dragMode ? t('move_hint_drag') : t('move_hint_click');
     }
   }
 
   // === 標題/難度/劇情選單接線 ===
-  const STORY = { title: LEVEL.name, pages: LEVEL.story || STORY1.pages };
-  if (LEVEL.id === 'chapter1') STORY.title = STORY1.title;
+  // 開場故事依語言動態取（第一章用 STORY1，其餘用 LEVEL.story），缺翻譯退回中文
+  function storyTitle() {
+    return LEVEL.id === 'chapter1' ? tx('story1.title', STORY1.title) : tx(LEVEL.id + '.name', LEVEL.name);
+  }
+  function storyPages() {
+    const src = LEVEL.id === 'chapter1' ? STORY1.pages : LEVEL.story || STORY1.pages;
+    const prefix = LEVEL.id === 'chapter1' ? 'story1.' : LEVEL.id + '.story.';
+    return src.map((p, i) => tx(prefix + i, p));
+  }
+
+  // 內容翻譯 helper（中文原文在資料檔，其他語言查 content-*.js）
+  function itemName(id) {
+    return tx('item.' + id + '.name', (ITEMS[id] && ITEMS[id].name) || id);
+  }
+  function lockName(key) {
+    return tx(LEVEL.id + '.lock.' + key, (world.lockNames && world.lockNames[key]) ?? key);
+  }
+  function docTitle(d) {
+    return tx('doc.' + d.id + '.title', d.title);
+  }
+  function npcName(n) {
+    return tx('npc.' + LEVEL.id + '.' + n.id + '.name', n.name);
+  }
+  function chapEndTitle() {
+    if (getLang() === 'zh') return LEVEL.name.split('：')[0] + '　完';
+    return tx(LEVEL.id + '.name', LEVEL.name) + t('chapter_complete_suffix');
+  }
+
+  // === i18n：靜態文字套用與語言切換 ===
+  function applyStaticI18n() {
+    for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+    for (const el of document.querySelectorAll('[data-i18n-html]')) el.innerHTML = t(el.dataset.i18nHtml);
+    for (const b of document.querySelectorAll('.lang-btn')) b.classList.toggle('active', b.dataset.lang === getLang());
+  }
+  function changeLang(l) {
+    setLang(l);
+    try {
+      saves.save(LANG_KEY, l);
+    } catch (e) {}
+    applyStaticI18n();
+    if (mode === 'story') $('story-title').textContent = storyTitle();
+    if (mode === 'paused') setMode('paused');
+    if (mode === 'title') $('title-tip').textContent = t('title_tip');
+  }
+  for (const b of document.querySelectorAll('.lang-btn')) {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      changeLang(b.dataset.lang);
+    });
+  }
+  applyStaticI18n();
 
   function startStory() {
     storyPage = 0;
     storyChars = 0;
-    $('story-title').textContent = STORY.title;
+    $('story-title').textContent = storyTitle();
     $('story-text').textContent = '';
     setMode('story');
   }
 
   function advanceStory() {
-    const page = STORY.pages[storyPage];
+    const pages = storyPages();
+    const page = pages[storyPage];
     if (storyChars < page.length) {
       storyChars = page.length; // 第一下：整頁顯示
       return;
     }
     storyPage += 1;
     storyChars = 0;
-    if (storyPage >= STORY.pages.length) beginPlay();
+    if (storyPage >= pages.length) beginPlay();
   }
 
   function beginPlay() {
@@ -310,7 +364,7 @@ function boot() {
       document.body.classList.add('touch');
       $('touch-ui').style.display = 'block';
     }
-    hintFlash(LEVEL.objective || '活下去', 4.5);
+    hintFlash(tx(LEVEL.id + '.objective', LEVEL.objective) || t('objective_default'), 4.5);
     if (!input.dragMode && canvas.requestPointerLock) {
       const p = canvas.requestPointerLock();
       if (p && p.catch) p.catch(() => {});
@@ -324,7 +378,7 @@ function boot() {
   $('btn-continue').addEventListener('click', () => {
     audio.unlock();
     if (doLoad()) beginPlay();
-    else $('title-tip').textContent = '沒有存檔紀錄';
+    else $('title-tip').textContent = t('no_save');
   });
   $('btn-help').addEventListener('click', () => setMode('help'));
   $('btn-help-back').addEventListener('click', () => setMode('title'));
@@ -374,8 +428,8 @@ function boot() {
   function idleHint() {
     if (isTouchOnly) return '';
     if (everLocked) return '';
-    if (input.dragMode) return '按住滑鼠拖曳調整視角．WASD 移動．E 互動';
-    return '點擊畫面鎖定視角．WASD 移動．E 互動';
+    if (input.dragMode) return t('idle_drag');
+    return t('idle_click');
   }
 
   // === 房間可視性 ===
@@ -389,8 +443,8 @@ function boot() {
     for (const trg of LEVEL.triggers || []) {
       if (trg.room !== roomId || firedTriggers.has(trg.id)) continue;
       firedTriggers.add(trg.id);
-      hintFlash(trg.text, 3.6);
-      if (trg.monologue) showMonologue(trg.monologue, 6); // 周亮均的內心獨白
+      hintFlash(tx('trg.' + trg.id + '.text', trg.text), 3.6);
+      if (trg.monologue) showMonologue(tx('trg.' + trg.id + '.mono', trg.monologue), 6); // 周亮均的內心獨白
       if (trg.sound) audio.play(trg.sound);
       if (trg.shake) renderer.shake(trg.shake);
       if (trg.alert) {
@@ -450,15 +504,15 @@ function boot() {
 
   function openDocument(doc) {
     readingDoc = doc;
-    $('doc-title').textContent = doc.title;
-    $('doc-text').textContent = doc.text;
+    $('doc-title').textContent = docTitle(doc);
+    $('doc-text').textContent = tx('doc.' + doc.id + '.text', doc.text);
     $('docread').style.display = 'flex';
     setMode('read');
     if (!docsRead.has(doc.id)) {
       docsRead.add(doc.id);
       if (doc.grantsKey && !inventory.keyItems.includes(doc.grantsKey)) {
         inventory.keyItems.push(doc.grantsKey);
-        hintFlash('記下了大門備援密碼：0746', 3.5);
+        hintFlash(t('wrote_code', { code: '0746' }), 3.5);
       }
       audio.play('pickup');
     }
@@ -480,8 +534,10 @@ function boot() {
   function openDialog(npc) {
     dialogNpc = npc;
     dialogPage = 0;
-    $('dialog-name').textContent = npc.name;
-    $('dialog-text').textContent = npcTalked.has(npc.id) ? npc.dialogAfter : npc.dialog[0];
+    $('dialog-name').textContent = npcName(npc);
+    $('dialog-text').textContent = npcTalked.has(npc.id)
+      ? tx('npc.' + LEVEL.id + '.' + npc.id + '.after', npc.dialogAfter)
+      : tx('npc.' + LEVEL.id + '.' + npc.id + '.d0', npc.dialog[0]);
     $('dialog').style.display = 'block';
     setMode('dialog');
   }
@@ -490,14 +546,14 @@ function boot() {
     if (npcTalked.has(dialogNpc.id)) return closeDialog();
     dialogPage += 1;
     if (dialogPage < dialogNpc.dialog.length) {
-      $('dialog-text').textContent = dialogNpc.dialog[dialogPage];
+      $('dialog-text').textContent = tx('npc.' + LEVEL.id + '.' + dialogNpc.id + '.d' + dialogPage, dialogNpc.dialog[dialogPage]);
       return;
     }
     // 首次對話結束：贈禮
     npcTalked.add(dialogNpc.id);
     for (const g of dialogNpc.gift || []) {
       inventory.add(g.item, g.count);
-      hintFlash(`取得 ${ITEMS[g.item].name}${g.count > 1 ? ' ×' + g.count : ''}`, 2.2);
+      hintFlash(t('got_item', { item: itemName(g.item) }) + (g.count > 1 ? ' ×' + g.count : ''), 2.2);
     }
     audio.play('pickup');
     hud.setAmmo(arsenal, inventory);
@@ -516,18 +572,23 @@ function boot() {
     const s = Math.floor(gameTime % 60);
     const total = (LEVEL.documents || []).length;
     const rank = computeRank(gameTime, docsRead.size, total, difficulty);
-    $('chapend-title').textContent = `${LEVEL.name.split('：')[0]}　完`;
+    $('chapend-title').textContent = chapEndTitle();
     $('chapend-rank').textContent = rank;
-    $('chapend-stats').textContent =
-      `存活時間 ${m} 分 ${String(s).padStart(2, '0')} 秒．文件 ${docsRead.size}/${total}．難度 ${DIFFICULTY[difficulty].name}`;
+    $('chapend-stats').textContent = t('chapend_stats', {
+      m,
+      s: String(s).padStart(2, '0'),
+      read: docsRead.size,
+      total,
+      diff: t('diff_' + difficulty + '_name'),
+    });
     const hasNext = LEVEL.next && CHAPTERS[LEVEL.next];
     $('btn-nextchap').style.display = hasNext ? '' : 'none';
     if (!hasNext) {
       // isFinal＝真正的結局；否則是「待續」的章末（下一章尚未製作）
-      $('chapend-title').textContent = LEVEL.isFinal ? '全章節　完' : `${LEVEL.name.split('：')[0]}　完`;
+      $('chapend-title').textContent = LEVEL.isFinal ? t('all_complete') : chapEndTitle();
       saves.remove(PROGRESS_KEY); // 回到乾淨狀態
     }
-    $('chapend-note').textContent = LEVEL.endingText || '';
+    $('chapend-note').textContent = tx(LEVEL.id + '.ending', LEVEL.endingText || '');
     $('countdown').style.display = 'none';
     $('chapend').style.display = 'flex';
     audio.setMusicIntensity(0);
@@ -583,7 +644,7 @@ function boot() {
     if (!shot) return;
     if (shot.empty) {
       audio.play('dry');
-      hintFlash('沒有子彈了——按 R 裝填');
+      hintFlash(t('no_ammo'));
       return;
     }
     const origin = { x: player.x, y: player.eyeHeight, z: player.z };
@@ -702,11 +763,11 @@ function boot() {
     poison(seconds) {
       const was = player.poison > 0;
       player.poison = Math.max(player.poison, seconds);
-      if (!was) hintFlash('中毒了——找藍色草藥解毒', 3.2);
+      if (!was) hintFlash(t('poisoned'), 3.2);
     },
     stunPlayer(seconds) {
       player.stun = Math.max(player.stun, seconds);
-      hintFlash('被電擊麻痺——行動遲緩！', 2.2);
+      hintFlash(t('paralyzed'), 2.2);
     },
     boom(x, y, z) {
       renderer.explosion(x, y, z);
@@ -740,7 +801,7 @@ function boot() {
       if (r.leftover > 0) {
         // 全有或全無：部分拾取會讓存檔狀態變複雜
         inventory.takeAmmo(p.def.item, r.added); // 還原
-        hintFlash('物品欄已滿');
+        hintFlash(t('inv_full'));
         audio.play('locked');
         return;
       }
@@ -748,7 +809,7 @@ function boot() {
     takenPickups.add(p.id);
     renderer.removePickup(p.id);
     audio.play('pickup');
-    hintFlash(`取得 ${def.name}${p.def.count > 1 ? ' ×' + p.def.count : ''}`);
+    hintFlash(t('got_item', { item: itemName(p.def.item) }) + (p.def.count > 1 ? ' ×' + p.def.count : ''));
     hud.setAmmo(arsenal, inventory);
   }
 
@@ -771,9 +832,7 @@ function boot() {
     data.firedTriggers = [...firedTriggers];
     saves.save(SAVE_KEY, data);
     audio.play('typewriter');
-    $('tw-info').textContent = saves.persistent
-      ? '已存檔。'
-      : '已存檔（此瀏覽器無法永久保存，關閉頁面將遺失）。';
+    $('tw-info').textContent = saves.persistent ? t('tw_saved') : t('tw_saved_volatile');
   }
 
   function doLoad() {
@@ -836,7 +895,7 @@ function boot() {
       return;
     }
     if (mode === 'story') {
-      const page = STORY.pages[storyPage] || '';
+      const page = storyPages()[storyPage] || '';
       if (storyChars < page.length) storyChars = Math.min(page.length, storyChars + dt * 42);
       $('story-text').textContent = page.slice(0, Math.floor(storyChars));
       const a = input.actions();
@@ -895,9 +954,9 @@ function boot() {
         if (doLoad()) {
           overlays.closeTypewriter();
           setMode('play');
-          hintFlash('讀取完成');
+          hintFlash(t('load_done'));
         } else {
-          $('tw-info').textContent = '沒有可讀取的存檔。';
+          $('tw-info').textContent = t('tw_no_save');
         }
       } else if (act === 'close') {
         overlays.closeTypewriter();
@@ -1075,13 +1134,13 @@ function boot() {
             if (!need || inventory.keyItems.includes(need)) chapterEnd();
             else {
               audio.play('locked');
-              hintFlash(LEVEL.exitHint || `需要「${world.lockNames[need] ?? need}」才能離開`, 3.5);
+              hintFlash(tx(LEVEL.id + '.exitHint', LEVEL.exitHint) || t('need_key', { key: lockName(need) }), 3.5);
             }
           }
         } else if (door.lock && inventory.keyItems.includes(door.lock)) {
           world.doors.get(door.id).lock = null;
           audio.play('reload');
-          hintFlash(`使用了「${world.lockNames[door.lock] ?? door.lock}」`, 2.2);
+          hintFlash(t('used_key', { key: lockName(door.lock) }), 2.2);
         } else if (door.lock) {
           audio.play('locked');
         } else {
@@ -1099,18 +1158,18 @@ function boot() {
       hint(hintOverride.text);
       if (hintOverride.t <= 0) hintOverride = null;
     } else if (npc) {
-      hint(`按 E 與${npc.name}交談`);
+      hint(t('hint_talk', { name: npcName(npc) }));
     } else if (doc) {
-      hint(`按 E 閱讀「${doc.title}」`);
+      hint(t('hint_read', { title: docTitle(doc) }));
     } else if (pickup) {
-      hint(`按 E 拾取 ${ITEMS[pickup.def.item].name}`);
+      hint(t('hint_pickup', { item: itemName(pickup.def.item) }));
     } else if (typewriter) {
-      hint('按 E 使用打字機');
+      hint(t('hint_typewriter'));
     } else if (door) {
-      if (door.lock === 'chapterExit') hint(LEVEL.exitCode ? '按 E 輸入密碼' : '按 E 離開廠區');
-      else if (door.lock && inventory.keyItems.includes(door.lock)) hint(`按 E 使用「${world.lockNames[door.lock] ?? door.lock}」`);
-      else if (door.lock) hint(`上鎖了——需要「${world.lockNames[door.lock] ?? door.lock}」`);
-      else hint(door.open ? '按 E 關門' : '按 E 開門');
+      if (door.lock === 'chapterExit') hint(LEVEL.exitCode ? t('hint_exit_code') : t('hint_exit'));
+      else if (door.lock && inventory.keyItems.includes(door.lock)) hint(t('hint_use_key', { key: lockName(door.lock) }));
+      else if (door.lock) hint(t('hint_locked', { key: lockName(door.lock) }));
+      else hint(door.open ? t('hint_close_door') : t('hint_open_door'));
     } else {
       hint(idleHint());
     }
@@ -1132,7 +1191,7 @@ function boot() {
         renderer.shake(0.22);
         audio.play('explosion');
         audio.setMusicIntensity(1);
-        hintFlash('銷毀協定啟動——豎井閘門緊急解鎖，快跑！', 4.5);
+        hintFlash(t('selfdestruct_start'), 4.5);
         $('countdown').style.display = 'block';
       }
     }
@@ -1140,10 +1199,10 @@ function boot() {
       countdownLeft -= dt;
       const cm = Math.floor(Math.max(0, countdownLeft) / 60);
       const cs = Math.floor(Math.max(0, countdownLeft) % 60);
-      $('countdown').textContent = `自毀 ${cm}:${String(cs).padStart(2, '0')}`;
+      $('countdown').textContent = t('countdown', { t: cm + ':' + String(cs).padStart(2, '0') });
       if (countdownLeft <= 0) {
         player.hp = 0;
-        hintFlash('熱熔銷毀系統啟動——', 2);
+        hintFlash(t('selfdestruct_final'), 2);
         die();
         return;
       }

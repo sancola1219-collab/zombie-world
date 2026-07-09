@@ -1,6 +1,7 @@
 // 覆蓋層 UI：物品欄（鍵盤導航）、打字機選單、死亡畫面。
 // 全鍵盤操作，不退出 pointer lock。只透過回傳值影響遊戲狀態。
 import { ITEMS } from '../game/items.js';
+import { t, tx } from '../engine/i18n.js';
 
 export class Overlays {
   constructor() {
@@ -85,7 +86,7 @@ export class Overlays {
       const s = inv.slots[i];
       if (s) {
         const def = ITEMS[s.id];
-        cell.innerHTML = `<span class="inv-name">${def.name}</span>` +
+        cell.innerHTML = `<span class="inv-name">${tx('item.' + s.id + '.name', def.name)}</span>` +
           (s.count > 1 ? `<span class="inv-count">×${s.count}</span>` : '');
       }
       // 觸控/滑鼠點格子＝移動游標（僅 UI 游標，不動遊戲狀態）
@@ -96,13 +97,13 @@ export class Overlays {
       this.gridEl.appendChild(cell);
     }
     const s = inv.slots[this.cursor];
-    this.descEl.textContent = s ? (ITEMS[s.id].desc || ITEMS[s.id].name) : '';
+    this.descEl.textContent = s ? tx('item.' + s.id + '.desc', ITEMS[s.id].desc || ITEMS[s.id].name) : '';
   }
 
   // === 打字機 ===
 
   openTypewriter(hasSave) {
-    this.twInfoEl.textContent = hasSave ? '發現既有的存檔紀錄。' : '尚無存檔紀錄。';
+    this.twInfoEl.textContent = hasSave ? t('tw_found_save') : t('tw_no_save_yet');
     this.twEl.style.display = 'flex';
   }
 
@@ -121,9 +122,7 @@ export class Overlays {
   // === 死亡 ===
 
   showDeath(hasSave) {
-    document.getElementById('death-tip').textContent = hasSave
-      ? 'R 讀取存檔．Enter 重新開始'
-      : 'Enter 重新開始';
+    document.getElementById('death-tip').textContent = hasSave ? t('death_tip') : t('death_tip_nosave');
     this.deathEl.style.display = 'flex';
   }
 
