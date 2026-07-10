@@ -7,7 +7,7 @@
 export const CHAPTER4 = {
   id: 'chapter4',
   name: '第四章：聖時爆君',
-  next: null, // 第五章待使用者提供劇本
+  next: 'chapter5', // 銜接街道篇〈斷電的街區〉
   exitNeeds: 'liftkey',
   exitHint: '這扇門也被鎖死了。硬闖沒用——得先到二樓平台，拔下物料提升機的釋放插銷，用配重砸出一條路',
   spawn: { x: 2, z: 1.5, yaw: -Math.PI / 2 }, // 廢液暫存區，面向東（往維修通道）

@@ -70,6 +70,69 @@ const GENERATORS = {
     return toTexture(c, 2);
   },
 
+  // 柏油路面：深灰底＋粗粒噪點＋褪色車道線與裂縫（街道篇地面）
+  asphalt() {
+    const rng = mulberry32(77);
+    const c = makeCanvas();
+    const g = c.getContext('2d');
+    g.fillStyle = '#2a2a2c';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2600; i++) {
+      const v = 30 + rng() * 34;
+      g.fillStyle = `rgba(${v}, ${v}, ${v + 2}, ${0.25 + rng() * 0.5})`;
+      g.fillRect(rng() * 256, rng() * 256, 1 + rng() * 2, 1 + rng() * 2);
+    }
+    // 裂縫
+    for (let i = 0; i < 5; i++) {
+      g.strokeStyle = 'rgba(12, 12, 12, 0.7)';
+      g.lineWidth = 1 + rng();
+      let x = rng() * 256, y = rng() * 256;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let s = 0; s < 7; s++) {
+        x += (rng() - 0.5) * 60; y += (rng() - 0.5) * 60;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    // 褪色車道線（虛線）
+    g.fillStyle = 'rgba(190, 180, 140, 0.28)';
+    for (let y = 8; y < 256; y += 64) g.fillRect(122, y, 12, 34);
+    return toTexture(c, 3);
+  },
+
+  // 磚牆：錯縫磚列＋灰縫＋煙燻污漬（街道篇牆面）
+  brick() {
+    const rng = mulberry32(88);
+    const c = makeCanvas();
+    const g = c.getContext('2d');
+    g.fillStyle = '#3a3230';
+    g.fillRect(0, 0, 256, 256);
+    const bw = 42, bh = 20;
+    for (let row = 0; row * bh < 256; row++) {
+      const off = row % 2 ? bw / 2 : 0;
+      for (let x = -bw; x < 256 + bw; x += bw) {
+        const r = 88 + rng() * 30, gg = 52 + rng() * 16, b = 42 + rng() * 12;
+        g.fillStyle = `rgb(${r}, ${gg}, ${b})`;
+        g.fillRect(x + off + 1.5, row * bh + 1.5, bw - 3, bh - 3);
+        // 磚面斑駁
+        g.fillStyle = `rgba(0, 0, 0, ${0.08 + rng() * 0.16})`;
+        for (let i = 0; i < 5; i++) {
+          g.fillRect(x + off + rng() * bw, row * bh + rng() * bh, 2 + rng() * 5, 1 + rng() * 3);
+        }
+      }
+    }
+    // 大片煙燻
+    for (let i = 0; i < 4; i++) {
+      const gr = g.createRadialGradient(rng() * 256, rng() * 256, 8, rng() * 256, rng() * 256, 60 + rng() * 60);
+      gr.addColorStop(0, 'rgba(10, 10, 10, 0.35)');
+      gr.addColorStop(1, 'rgba(10, 10, 10, 0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 256, 256);
+    }
+    return toTexture(c, 2);
+  },
+
   // 磁磚：格線＋每格微妙明度差
   tile() {
     const rng = mulberry32(22);

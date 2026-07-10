@@ -24,19 +24,37 @@ import { Mutant } from './game/enemies/mutant.js';
 import { Prime } from './game/enemies/prime.js';
 import { Warlord } from './game/enemies/warlord.js';
 import { Keeper } from './game/enemies/keeper.js';
+import { Ironmask } from './game/enemies/ironmask.js';
+import { Howler } from './game/enemies/howler.js';
+import { Dogking } from './game/enemies/dogking.js';
 import { separateEnemies } from './game/enemies/base.js';
 import { hazardAt } from './game/hazards.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord, keeper: Keeper };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord, keeper: Keeper, ironmask: Ironmask, howler: Howler, dogking: Dogking };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
 import { CHAPTER3 } from './levels/chapter3.js';
 import { CHAPTER4 } from './levels/chapter4.js';
+import { CHAPTER5 } from './levels/chapter5.js';
+import { CHAPTER6 } from './levels/chapter6.js';
+import { CHAPTER7 } from './levels/chapter7.js';
+import { CHAPTER8 } from './levels/chapter8.js';
+import { CHAPTER9 } from './levels/chapter9.js';
+import { CHAPTER10 } from './levels/chapter10.js';
+import { CHAPTER11 } from './levels/chapter11.js';
+import { CHAPTER12 } from './levels/chapter12.js';
+import { CHAPTER13 } from './levels/chapter13.js';
+import { CHAPTER14 } from './levels/chapter14.js';
 import { STORY1 } from './levels/story1.js';
 import { t, tx, setLang, getLang } from './engine/i18n.js';
 
-const CHAPTERS = { chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3, chapter4: CHAPTER4 };
+const CHAPTERS = {
+  chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3, chapter4: CHAPTER4,
+  chapter5: CHAPTER5, chapter6: CHAPTER6, chapter7: CHAPTER7, chapter8: CHAPTER8,
+  chapter9: CHAPTER9, chapter10: CHAPTER10, chapter11: CHAPTER11, chapter12: CHAPTER12,
+  chapter13: CHAPTER13, chapter14: CHAPTER14,
+};
 const PROGRESS_KEY = 'zombie-world-progress';
 import { HUD } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';
@@ -775,6 +793,11 @@ function boot() {
       for (const e of enemies) {
         if (!e.dead && Math.hypot(e.x - x, e.z - z) < 2.5) e.hurt(60, 'body');
       }
+    },
+    alertAll() {
+      // 嘶吼者的尖嘯：驚動整張地圖的敵人
+      for (const e of enemies) if (!e.dead) e.alert();
+      renderer.shake(0.06);
     },
   };
 

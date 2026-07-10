@@ -239,6 +239,13 @@ export class AudioEngine {
     this._burst({ freq: 175, vol: 0.4, dur: 0.1 });
   }
 
+  _howl() {
+    // 嘶吼者尖嘯：高頻鋸齒掃頻＋帶通噪音，刺耳的警笛感
+    this._tone({ type: 'sawtooth', from: 700, to: 1600, vol: 0.28, dur: 0.5 });
+    this._tone({ type: 'sawtooth', from: 720, to: 1580, vol: 0.18, dur: 0.5, when: 0.03 });
+    this._burst({ type: 'bandpass', freq: 2200, vol: 0.3, dur: 0.45 });
+  }
+
   _stomp() {
     // 聖時爆君的沉重腳步：低頻悶擊＋短促地面震動尾音
     this._burst({ type: 'lowpass', freq: 120, vol: 0.6, dur: 0.14 });

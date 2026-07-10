@@ -47,7 +47,7 @@ test('第四章：聖時爆君(warlord) Boss＋內心獨白＋第五章伏筆', 
   const withMono = CHAPTER4.triggers.filter((t) => t.monologue).length;
   assert.ok(withMono >= 3, `應有多個內心獨白觸發器，實際 ${withMono}`);
   assert.ok(CHAPTER4.endingText.includes('第五章') || CHAPTER4.endingText.includes('待續'));
-  assert.equal(CHAPTER4.next, null);
+  assert.equal(CHAPTER4.next, 'chapter5'); // 已銜接街道篇
 });
 
 test('聖時爆君 AI：高血量裝甲、半血狂暴加速、火箭與重擊', () => {

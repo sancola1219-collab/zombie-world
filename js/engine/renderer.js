@@ -21,6 +21,9 @@ import {
   buildWarlordMesh,
   buildKeeperMesh,
   buildCorpseMesh,
+  buildIronmaskMesh,
+  buildHowlerMesh,
+  buildDogkingMesh,
 } from './meshes.js';
 
 const ENEMY_BUILDERS = {
@@ -36,6 +39,9 @@ const ENEMY_BUILDERS = {
   prime: buildPrimeMesh,
   warlord: buildWarlordMesh,
   keeper: buildKeeperMesh,
+  ironmask: buildIronmaskMesh,
+  howler: buildHowlerMesh,
+  dogking: buildDogkingMesh,
 };
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）
@@ -135,7 +141,10 @@ export class Renderer {
       // shininess/specular 0＝霧面無高光斑
       const floorMat = new THREE.MeshPhongMaterial({ map: getTexture(room.floor || 'wood'), shininess: 0, specular: 0x000000, dithering: true });
       const wallMat = new THREE.MeshPhongMaterial({ map: getTexture(room.walls || 'wallpaper'), shininess: 0, specular: 0x000000, dithering: true });
-      const ceilMat = new THREE.MeshPhongMaterial({ map: getTexture('plaster'), color: 0x777470, shininess: 0, specular: 0x000000, dithering: true });
+      // sky:true＝戶外街道：天花板改為不受光的深夜色（雨夜天空），不用貼圖
+      const ceilMat = room.sky
+        ? new THREE.MeshBasicMaterial({ color: 0x07080e })
+        : new THREE.MeshPhongMaterial({ map: getTexture('plaster'), color: 0x777470, shininess: 0, specular: 0x000000, dithering: true });
       const cx = room.x + room.w / 2;
       const cz = room.z + room.d / 2;
 
@@ -803,9 +812,10 @@ export class Renderer {
     for (const g of this.enemyMeshes.values()) {
       const parts = g.userData.parts;
       if (!g.visible || !parts || g.userData.dead) continue;
-      if (g.userData.moving) g.userData.phase += dt * (g.userData.kind === 'dog' ? 15 : 5.2);
+      const quad = g.userData.kind === 'dog' || g.userData.kind === 'dogking'; // 四足
+      if (g.userData.moving) g.userData.phase += dt * (quad ? 15 : 5.2);
       const s = Math.sin(g.userData.phase);
-      if (g.userData.kind === 'dog') {
+      if (quad) {
         parts.legFL.rotation.x = s * 0.85;
         parts.legBR.rotation.x = s * 0.85;
         parts.legFR.rotation.x = -s * 0.85;
@@ -1116,6 +1126,91 @@ function makeProp(p) {
         m.rotation.y = rng() * Math.PI * 2;
         g.add(m);
       }
+      break;
+    }
+    case 'car': {
+      // 燒毀/棄置車輛（街道篇路障）：車身+車頂艙+焦黑車窗+輪胎；variant 1=翻覆
+      const body = new THREE.MeshLambertMaterial({ color: [0x3a3f46, 0x4a3026, 0x2c3a30][((p.variant ?? 0) + 1) % 3], dithering: true });
+      const burnt = new THREE.MeshLambertMaterial({ color: 0x191919, dithering: true });
+      const glass = new THREE.MeshLambertMaterial({ color: 0x0c0e10, dithering: true });
+      const tire = new THREE.MeshLambertMaterial({ color: 0x121212, dithering: true });
+      const car = new THREE.Group();
+      const bd = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 1.6), (p.variant ?? 0) === 2 ? burnt : body);
+      bd.position.y = 0.5;
+      car.add(bd);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.5, 1.45), (p.variant ?? 0) === 2 ? burnt : body);
+      cab.position.set(-0.2, 1.0, 0);
+      car.add(cab);
+      const win = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.3, 1.3), glass);
+      win.position.set(-0.2, 1.02, 0);
+      car.add(win);
+      for (const [wx, wz] of [[-1.25, 0.75], [1.25, 0.75], [-1.25, -0.75], [1.25, -0.75]]) {
+        const t = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 10), tire);
+        t.rotation.x = Math.PI / 2;
+        t.position.set(wx, 0.3, wz);
+        car.add(t);
+      }
+      if ((p.variant ?? 0) === 1) { // 翻覆
+        car.rotation.z = Math.PI;
+        car.position.y = 1.25;
+      }
+      g.add(car);
+      break;
+    }
+    case 'streetlight': {
+      // 路燈：高桿+懸臂+燈頭（燈光由房間 light 資料負責，這裡純造型）
+      const pole = new THREE.MeshLambertMaterial({ color: 0x2e3236, dithering: true });
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 4.6, 8), pole);
+      post.position.y = 2.3;
+      g.add(post);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.2, 6), pole);
+      arm.rotation.z = Math.PI / 2;
+      arm.position.set(0.55, 4.5, 0);
+      g.add(arm);
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.12, 0.2),
+        new THREE.MeshBasicMaterial({ color: p.dead ? 0x1a1a1a : 0xd8c890 })
+      );
+      head.position.set(1.1, 4.46, 0);
+      g.add(head);
+      break;
+    }
+    case 'trash': {
+      // 垃圾堆：垃圾袋數包+散落紙屑
+      for (let i = 0; i < 4; i++) {
+        const bag = new THREE.Mesh(
+          new THREE.SphereGeometry(0.22 + rng() * 0.14, 7, 6),
+          new THREE.MeshLambertMaterial({ color: [0x1e2422, 0x24201c, 0x202028][i % 3], dithering: true })
+        );
+        bag.scale.y = 0.75;
+        bag.position.set((rng() - 0.5) * 1.1, 0.18, (rng() - 0.5) * 1.1);
+        g.add(bag);
+      }
+      for (let i = 0; i < 5; i++) {
+        const paper = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.16, 0.22),
+          new THREE.MeshLambertMaterial({ color: 0x8a877c, side: THREE.DoubleSide, dithering: true })
+        );
+        paper.rotation.x = -Math.PI / 2;
+        paper.rotation.z = rng() * Math.PI;
+        paper.position.set((rng() - 0.5) * 1.8, 0.012, (rng() - 0.5) * 1.8);
+        g.add(paper);
+      }
+      break;
+    }
+    case 'hydrant': {
+      // 消防栓
+      const red = new THREE.MeshLambertMaterial({ color: 0x7a2018, dithering: true });
+      const bodyH = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, 0.72, 10), red);
+      bodyH.position.y = 0.36;
+      g.add(bodyH);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), red);
+      cap.position.y = 0.75;
+      g.add(cap);
+      const noz = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.34, 8), red);
+      noz.rotation.z = Math.PI / 2;
+      noz.position.y = 0.5;
+      g.add(noz);
       break;
     }
     default:

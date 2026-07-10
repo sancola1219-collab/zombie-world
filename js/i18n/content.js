@@ -1,19 +1,41 @@
 // 內容（劇情/文件/對話/獨白/道具）翻譯彙整。中文原文留在 js/levels/* 與 items.js 當來源與後備，
 // 這裡只放 en/de/ja。按範圍分檔（parts/），各檔 export { en, de, ja }，避免翻譯時互相衝突。
 import { story } from './parts/story.js';
+import { street } from './parts/street.js'; // 街道篇道具等共用內容
 import { ch1 } from './parts/ch1.js';
 import { ch2 } from './parts/ch2.js';
 import { ch3 } from './parts/ch3.js';
 import { ch4 } from './parts/ch4.js';
+import { ch5 } from './parts/ch5.js';
+import { ch6 } from './parts/ch6.js';
+import { ch7 } from './parts/ch7.js';
+import { ch8 } from './parts/ch8.js';
+import { ch9 } from './parts/ch9.js';
+import { ch10 } from './parts/ch10.js';
+import { ch11 } from './parts/ch11.js';
+import { ch12 } from './parts/ch12.js';
+import { ch13 } from './parts/ch13.js';
+import { ch14 } from './parts/ch14.js';
 
 // NPC 林欣儀在四章都用相同 id 'xinyi'，key 'npc.xinyi.*' 會跨章互相覆蓋——
 // 合併時給每章的 npc.* key 加章節命名空間（npc.{chapterId}.*），main.js 查詢時亦帶 LEVEL.id。
 const scoped = [
   ['', story],
+  ['', street],
   ['chapter1', ch1],
   ['chapter2', ch2],
   ['chapter3', ch3],
   ['chapter4', ch4],
+  ['chapter5', ch5],
+  ['chapter6', ch6],
+  ['chapter7', ch7],
+  ['chapter8', ch8],
+  ['chapter9', ch9],
+  ['chapter10', ch10],
+  ['chapter11', ch11],
+  ['chapter12', ch12],
+  ['chapter13', ch13],
+  ['chapter14', ch14],
 ];
 function merge(lang) {
   const o = {};

@@ -771,6 +771,203 @@ export function buildWarlordMesh() {
   return g;
 }
 
+// 鐵面・鎮暴隊長（1.9m）：金屬面罩＋鎮暴盾左臂＋警棍右手＋黑色鎮暴裝
+export function buildIronmaskMesh() {
+  const g = new THREE.Group();
+  const armor = mat(0x1c1e24);      // 鎮暴裝
+  const armorHi = mat(0x2a2d36);
+  const metal = mat(0x4a4e56);      // 面罩/盾
+  const metalDark = mat(0x33363c);
+  const flesh = mat(0x8a7a68);      // 裂縫露出的病變皮膚
+  const vein = new THREE.MeshBasicMaterial({ color: 0x4a90d9 });
+
+  // 腿（護具）
+  const legL = new THREE.Group();
+  legL.position.set(-0.13, 0.92, 0);
+  cap(legL, armor, 0.075, 0.3, 0, -0.18, 0, -0.04);
+  cap(legL, armorHi, 0.06, 0.28, 0, -0.58, 0.02, 0.06);
+  blob(legL, metalDark, 0.055, 1.1, 0.5, 2.0, 0, -0.86, -0.04); // 戰鬥靴
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.13, 0.92, 0);
+  cap(legR, armor, 0.075, 0.3, 0, -0.18, 0, -0.04);
+  cap(legR, armorHi, 0.06, 0.28, 0, -0.58, 0.02, 0.06);
+  blob(legR, metalDark, 0.055, 1.1, 0.5, 2.0, 0, -0.86, -0.04);
+  g.add(legR);
+
+  // 軀幹（防彈背心+肩甲）
+  const torso = new THREE.Group();
+  torso.position.y = 0.9;
+  blob(torso, armor, 0.12, 1.6, 1.05, 1.15, 0, 0.05, 0);
+  blob(torso, armorHi, 0.14, 1.6, 1.5, 1.15, 0, 0.5, 0);
+  box(torso, metalDark, 0.34, 0.4, 0.1, 0, 0.5, -0.14);       // 胸甲板
+  blob(torso, metal, 0.085, 1, 0.9, 1, -0.26, 0.66, 0);        // 金屬肩甲
+  blob(torso, metal, 0.085, 1, 0.9, 1, 0.26, 0.66, 0);
+  blob(torso, flesh, 0.04, 1, 1.6, 0.6, 0.1, 0.28, -0.13);     // 背心裂縫露肉
+  blob(torso, vein, 0.014, 1, 2.0, 0.5, 0.1, 0.28, -0.145);
+
+  // 頭（全罩金屬面罩、一道裂縫透藍光）
+  const head = new THREE.Group();
+  head.position.set(0, 0.84, -0.02);
+  blob(head, metal, 0.1, 1.0, 1.15, 1.05, 0, 0.05, 0);
+  box(head, metalDark, 0.16, 0.045, 0.02, 0, 0.05, -0.1);      // 面罩視窗縫
+  blob(head, vein, 0.012, 1, 1.8, 0.5, -0.05, 0.02, -0.098);   // 裂縫藍光
+  torso.add(head);
+
+  // 左臂（鎮暴盾）
+  const armD = new THREE.Group();
+  armD.position.set(-0.28, 0.62, -0.02);
+  cap(armD, armor, 0.06, 0.2, 0, -0.03, -0.2, Math.PI / 2 + 0.15);
+  const shield = new THREE.Group();
+  shield.position.set(-0.14, -0.1, -0.34);
+  box(shield, metal, 0.06, 1.15, 0.62, 0, 0, 0, 0, 0.15, 0);   // 盾面
+  box(shield, metalDark, 0.04, 1.0, 0.5, -0.05, 0, 0, 0, 0.15, 0);
+  armD.add(shield);
+  torso.add(armD);
+
+  // 右臂（警棍）
+  const armF = new THREE.Group();
+  armF.position.set(0.28, 0.62, -0.02);
+  cap(armF, armor, 0.06, 0.2, 0, -0.02, -0.2, Math.PI / 2 + 0.1);
+  cap(armF, flesh, 0.045, 0.16, 0, -0.05, -0.4, Math.PI / 2 + 0.3);
+  cap(armF, metalDark, 0.025, 0.3, 0.02, -0.12, -0.58, 1.2);   // 警棍
+  torso.add(armF);
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF, armD, torso };
+  g.userData.kind = 'ironmask';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
+// 嘶吼者（1.8m 瘦長）：喉部與擴音喇叭融合、下顎撐裂、細長肢體
+export function buildHowlerMesh() {
+  const g = new THREE.Group();
+  const skin = mat(0x9a8878);
+  const skinDark = mat(0x6e5e50);
+  const horn = mat(0x3a3f46);       // 金屬喇叭
+  const hornDark = mat(0x24282e);
+  const blood = mat(0x4a0d0d);
+  const glow = new THREE.MeshBasicMaterial({ color: 0x4ad9c4 });
+
+  // 細長腿
+  const legL = new THREE.Group();
+  legL.position.set(-0.1, 0.95, 0);
+  cap(legL, skinDark, 0.05, 0.32, 0, -0.2, 0, -0.05);
+  cap(legL, skin, 0.04, 0.3, 0, -0.62, 0.03, 0.1);
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.1, 0.95, 0);
+  cap(legR, skinDark, 0.05, 0.32, 0, -0.2, 0, -0.05);
+  cap(legR, skin, 0.04, 0.3, 0, -0.62, 0.03, 0.1);
+  g.add(legR);
+
+  // 瘦削軀幹（肋骨浮凸、後仰嘶吼姿態）
+  const torso = new THREE.Group();
+  torso.position.y = 0.92;
+  torso.rotation.x = -0.12; // 後仰
+  blob(torso, skin, 0.09, 1.3, 1.5, 0.9, 0, 0.4, 0);
+  for (let i = 0; i < 3; i++) blob(torso, skinDark, 0.05, 1.3, 0.16, 0.7, 0, 0.24 + i * 0.14, -0.055); // 肋
+  blob(torso, glow, 0.014, 1, 2.2, 0.5, 0.03, 0.4, -0.085);
+
+  // ★ 喉部喇叭（要害）：金屬擴音器從喉嚨裡長出來
+  const throat = new THREE.Group();
+  throat.position.set(0, 0.66, -0.1);
+  cyl(throat, hornDark, 0.05, 0.09, 0.16, 8, 0, 0, -0.05, Math.PI / 2 + 0.5);
+  cyl(throat, horn, 0.1, 0.14, 0.1, 8, 0, 0.04, -0.16, Math.PI / 2 + 0.5); // 喇叭口
+  blob(throat, blood, 0.05, 1.2, 0.8, 0.8, 0, -0.03, 0.02);   // 融合處血肉
+  torso.add(throat);
+
+  // 頭（下顎撐裂大張）
+  const head = new THREE.Group();
+  head.position.set(0, 0.86, -0.02);
+  head.rotation.x = -0.35; // 仰頭嘶吼
+  blob(head, skin, 0.085, 1.0, 1.1, 1.0, 0, 0.05, 0);
+  blob(head, skinDark, 0.06, 1.2, 0.5, 0.9, 0, -0.08, -0.06, 0.7); // 撐裂下顎
+  blob(head, blood, 0.045, 1.0, 0.5, 0.7, 0, -0.05, -0.07, 0.6);   // 口腔
+  blob(head, mat(0x0c0c10), 0.016, 1.3, 1.1, 0.5, -0.035, 0.07, -0.075);
+  blob(head, mat(0x0c0c10), 0.016, 1.3, 1.1, 0.5, 0.035, 0.07, -0.075);
+  torso.add(head);
+
+  // 細長臂（向外張開）
+  const armF = new THREE.Group();
+  armF.position.set(-0.2, 0.62, 0);
+  armF.rotation.z = -0.5;
+  cap(armF, skin, 0.035, 0.24, 0, -0.14, -0.06, Math.PI / 2 + 0.4);
+  cap(armF, skinDark, 0.03, 0.22, 0, -0.34, -0.16, Math.PI / 2 + 0.6);
+  torso.add(armF);
+  const armD = new THREE.Group();
+  armD.position.set(0.2, 0.62, 0);
+  armD.rotation.z = 0.5;
+  cap(armD, skin, 0.035, 0.24, 0, -0.14, -0.06, Math.PI / 2 + 0.4);
+  cap(armD, skinDark, 0.03, 0.22, 0, -0.34, -0.16, Math.PI / 2 + 0.6);
+  torso.add(armD);
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF, armD, torso };
+  g.userData.kind = 'howler';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
+// 裂嘴犬王（肩高 1.1m 巨犬）：嘴裂到耳後、背脊骨刺、KY 藍光裂縫——四足 parts 隨動畫擺動
+export function buildDogkingMesh() {
+  const g = new THREE.Group();
+  const fur = mat(0x2e2a26);
+  const furDark = mat(0x1e1b18);
+  const flesh = mat(0x6a1414);
+  const teeth = mat(0xcfc7b4);
+  const bone = mat(0x8a8478);
+  const glow = new THREE.MeshBasicMaterial({ color: 0x4ad9c4 });
+  const eye = new THREE.MeshBasicMaterial({ color: 0xff3322 });
+
+  // 軀幹
+  blob(g, fur, 0.34, 1.9, 1.0, 1.05, 0, 0.72, 0.1);
+  blob(g, furDark, 0.28, 1.4, 0.95, 1.0, 0, 0.78, 0.5);        // 後臀
+  blob(g, glow, 0.02, 1, 2.2, 0.5, 0.2, 0.72, -0.1);           // 體側藍光裂縫
+  // 背脊骨刺
+  for (let i = 0; i < 5; i++) {
+    cap(g, bone, 0.028, 0.12 + (2 - Math.abs(i - 2)) * 0.04, -0.4 + i * 0.25, 1.02, 0.15, Math.PI + 0.3 * (i - 2) * 0.2);
+  }
+  // 頭（裂嘴）
+  const headG = new THREE.Group();
+  headG.position.set(-0.62, 0.86, 0);
+  blob(headG, fur, 0.2, 1.3, 1.0, 0.95, 0, 0, 0);
+  blob(headG, furDark, 0.13, 1.6, 0.6, 0.8, -0.18, -0.08, 0);  // 吻部
+  blob(headG, flesh, 0.1, 1.7, 0.35, 0.7, -0.2, -0.14, 0);     // ★ 裂到耳後的嘴
+  for (const tx of [-0.3, -0.22, -0.14, -0.06]) {
+    cap(headG, teeth, 0.012, 0.05, tx, -0.1, -0.08, Math.PI);
+    cap(headG, teeth, 0.012, 0.05, tx, -0.18, -0.08, 0);
+  }
+  blob(headG, eye, 0.028, 1, 1, 1, -0.08, 0.1, -0.14);
+  blob(headG, eye, 0.028, 1, 1, 1, -0.08, 0.1, 0.14);
+  cap(headG, fur, 0.045, 0.1, 0.08, 0.2, -0.12, 0.4);          // 耳
+  cap(headG, fur, 0.045, 0.1, 0.08, 0.2, 0.12, -0.4);
+  g.add(headG);
+  // 尾
+  cap(g, furDark, 0.05, 0.3, 0.85, 0.9, 0, 0, 0, -0.9);
+
+  // 四足（renderer 四足擺動動畫吃這些 parts 名）
+  const mkLeg = (x, z) => {
+    const leg = new THREE.Group();
+    leg.position.set(x, 0.62, z);
+    cap(leg, fur, 0.07, 0.26, 0, -0.16, 0, 0.06);
+    cap(leg, furDark, 0.05, 0.22, 0, -0.44, 0.02, -0.08);
+    blob(leg, furDark, 0.06, 1.3, 0.5, 1.5, 0, -0.58, -0.03);  // 爪
+    g.add(leg);
+    return leg;
+  };
+  const legFL = mkLeg(-0.42, -0.22);
+  const legFR = mkLeg(-0.42, 0.22);
+  const legBL = mkLeg(0.45, -0.22);
+  const legBR = mkLeg(0.45, 0.22);
+
+  g.userData.parts = { legFL, legFR, legBL, legBR };
+  g.userData.kind = 'dogking';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
 // 電氣室守門者（第一章魔王，約 1.9m）：原 E 區值班技術員——
 // 右半身被電弧燒焦碳化、背上插著斷裂電纜（尖端帶電火花）、右臂帶電藍光裂縫。
 export function buildKeeperMesh() {
