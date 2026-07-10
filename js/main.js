@@ -27,10 +27,12 @@ import { Keeper } from './game/enemies/keeper.js';
 import { Ironmask } from './game/enemies/ironmask.js';
 import { Howler } from './game/enemies/howler.js';
 import { Dogking } from './game/enemies/dogking.js';
+import { Stitcher } from './game/enemies/stitcher.js';
+import { Drbai } from './game/enemies/drbai.js';
 import { separateEnemies } from './game/enemies/base.js';
 import { hazardAt } from './game/hazards.js';
 
-const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord, keeper: Keeper, ironmask: Ironmask, howler: Howler, dogking: Dogking };
+const ENEMY_TYPES = { zombie: Zombie, dog: Dog, hunter: Hunter, lurker: Lurker, spider: Spider, creeper: Creeper, bloater: Bloater, agent: Agent, mutant: Mutant, prime: Prime, warlord: Warlord, keeper: Keeper, ironmask: Ironmask, howler: Howler, dogking: Dogking, stitcher: Stitcher, drbai: Drbai };
 import { buildSave, applySave, computeRank } from './game/gamestate.js';
 import { CHAPTER1 } from './levels/chapter1.js';
 import { CHAPTER2 } from './levels/chapter2.js';
@@ -46,6 +48,16 @@ import { CHAPTER11 } from './levels/chapter11.js';
 import { CHAPTER12 } from './levels/chapter12.js';
 import { CHAPTER13 } from './levels/chapter13.js';
 import { CHAPTER14 } from './levels/chapter14.js';
+import { CHAPTER15 } from './levels/chapter15.js';
+import { CHAPTER16 } from './levels/chapter16.js';
+import { CHAPTER17 } from './levels/chapter17.js';
+import { CHAPTER18 } from './levels/chapter18.js';
+import { CHAPTER19 } from './levels/chapter19.js';
+import { CHAPTER20 } from './levels/chapter20.js';
+import { CHAPTER21 } from './levels/chapter21.js';
+import { CHAPTER22 } from './levels/chapter22.js';
+import { CHAPTER23 } from './levels/chapter23.js';
+import { CHAPTER24 } from './levels/chapter24.js';
 import { STORY1 } from './levels/story1.js';
 import { t, tx, setLang, getLang } from './engine/i18n.js';
 
@@ -54,6 +66,9 @@ const CHAPTERS = {
   chapter5: CHAPTER5, chapter6: CHAPTER6, chapter7: CHAPTER7, chapter8: CHAPTER8,
   chapter9: CHAPTER9, chapter10: CHAPTER10, chapter11: CHAPTER11, chapter12: CHAPTER12,
   chapter13: CHAPTER13, chapter14: CHAPTER14,
+  chapter15: CHAPTER15, chapter16: CHAPTER16, chapter17: CHAPTER17, chapter18: CHAPTER18,
+  chapter19: CHAPTER19, chapter20: CHAPTER20, chapter21: CHAPTER21, chapter22: CHAPTER22,
+  chapter23: CHAPTER23, chapter24: CHAPTER24,
 };
 const PROGRESS_KEY = 'zombie-world-progress';
 import { HUD } from './ui/hud.js';

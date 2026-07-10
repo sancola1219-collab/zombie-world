@@ -968,6 +968,158 @@ export function buildDogkingMesh() {
   return g;
 }
 
+// 縫合醫師（1.95m）：染血手術袍＋背架機械臂×3＋手術刀，臉上還掛著口罩
+export function buildStitcherMesh() {
+  const g = new THREE.Group();
+  const gown = mat(0x5a6a62);       // 手術袍（褪色綠）
+  const gownBlood = mat(0x47353a);  // 染血下擺
+  const skin = mat(0xb0a090);
+  const steel = mat(0x565c64);      // 機械臂
+  const steelDark = mat(0x2e3238);
+  const blade = mat(0xc8ccd2);      // 刀
+  const glow = new THREE.MeshBasicMaterial({ color: 0x4ad9c4 });
+
+  // 腿（手術袍下擺遮住）
+  const legL = new THREE.Group();
+  legL.position.set(-0.12, 0.95, 0);
+  cap(legL, gownBlood, 0.09, 0.34, 0, -0.22, 0);
+  cap(legL, gown, 0.055, 0.26, 0, -0.62, 0.03, 0.08);
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.12, 0.95, 0);
+  cap(legR, gownBlood, 0.09, 0.34, 0, -0.22, 0);
+  cap(legR, gown, 0.055, 0.26, 0, -0.62, 0.03, 0.08);
+  g.add(legR);
+
+  // 軀幹（手術袍、胸前大片血污）
+  const torso = new THREE.Group();
+  torso.position.y = 0.95;
+  blob(torso, gown, 0.12, 1.5, 1.1, 1.1, 0, 0.05, 0);
+  blob(torso, gown, 0.13, 1.5, 1.5, 1.1, 0, 0.52, 0);
+  blob(torso, gownBlood, 0.07, 1.3, 1.4, 0.7, 0.02, 0.3, -0.12); // 血污
+  blob(torso, glow, 0.013, 1, 2.0, 0.5, -0.06, 0.4, -0.135);
+
+  // 頭（口罩、頭燈）
+  const head = new THREE.Group();
+  head.position.set(0, 0.88, -0.02);
+  blob(head, skin, 0.09, 1.0, 1.12, 1.0, 0, 0.05, 0);
+  blob(head, mat(0x8a97a0), 0.06, 1.2, 0.7, 0.9, 0, -0.02, -0.055); // 口罩
+  cyl(head, steelDark, 0.045, 0.045, 0.03, 10, 0, 0.12, -0.085, Math.PI / 2); // 頭燈
+  blob(head, glow, 0.014, 1, 1, 1, 0, 0.12, -0.1); // 頭燈亮點
+  torso.add(head);
+
+  // 左臂（人手，持縫合器）
+  const armD = new THREE.Group();
+  armD.position.set(-0.24, 0.62, -0.02);
+  cap(armD, gown, 0.05, 0.2, 0, -0.03, -0.2, Math.PI / 2 + 0.2);
+  blob(armD, skin, 0.035, 1, 0.6, 1.2, 0, -0.1, -0.38, 0.4);
+  torso.add(armD);
+  // 右臂（人手，持手術刀）
+  const armF = new THREE.Group();
+  armF.position.set(0.24, 0.62, -0.02);
+  cap(armF, gown, 0.05, 0.2, 0, -0.02, -0.22, Math.PI / 2 + 0.1);
+  blob(armF, skin, 0.035, 1, 0.6, 1.2, 0, -0.05, -0.4, 0.2);
+  box(armF, blade, 0.012, 0.03, 0.22, 0, -0.06, -0.52); // 手術刀
+  torso.add(armF);
+
+  // ★ 背架機械臂 ×3（從背後拱起，各端一具器械）
+  for (const [ang, len, tool] of [[-0.7, 0.55, 'clamp'], [0, 0.65, 'saw'], [0.7, 0.55, 'needle']]) {
+    const arm = new THREE.Group();
+    arm.position.set(0, 0.72, 0.14);
+    arm.rotation.z = ang;
+    cap(arm, steel, 0.028, len * 0.5, 0, len * 0.35, 0.12, 0.9);
+    cap(arm, steelDark, 0.022, len * 0.45, 0, len * 0.72, -0.05, 1.7);
+    if (tool === 'saw') cyl(arm, blade, 0.06, 0.06, 0.012, 12, 0, len * 0.95, -0.16, Math.PI / 2);
+    else if (tool === 'needle') cap(arm, blade, 0.007, 0.12, 0, len * 0.95, -0.18, 1.8);
+    else box(arm, steelDark, 0.05, 0.02, 0.06, 0, len * 0.95, -0.16);
+    torso.add(arm);
+  }
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF, armD, torso };
+  g.userData.kind = 'stitcher';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
+// 白博士・藍囊教父（2.3m）：白袍殘片＋拉長的脊椎＋針管觸手雙臂＋胸口三顆發光藍囊
+export function buildDrbaiMesh() {
+  const g = new THREE.Group();
+  const coat = mat(0xb8b8b2);       // 白袍殘片
+  const coatDirty = mat(0x8a8a80);
+  const flesh = mat(0x7a6e64);      // 變異皮膚
+  const fleshDark = mat(0x54483e);
+  const spine = mat(0x9a9284);      // 外露脊椎
+  const needle = mat(0xc8ccd2);
+  const sac = new THREE.MeshBasicMaterial({ color: 0x55baff });  // ★ 藍囊
+  const vein = new THREE.MeshBasicMaterial({ color: 0x4a90d9 });
+
+  // 腿（白袍下襬撕裂、微屈）
+  const legL = new THREE.Group();
+  legL.position.set(-0.14, 1.05, 0);
+  cap(legL, coatDirty, 0.08, 0.36, 0, -0.24, 0, -0.08);
+  cap(legL, flesh, 0.055, 0.3, 0, -0.68, 0.04, 0.14);
+  g.add(legL);
+  const legR = new THREE.Group();
+  legR.position.set(0.14, 1.05, 0);
+  cap(legR, coatDirty, 0.08, 0.36, 0, -0.24, 0, -0.08);
+  cap(legR, flesh, 0.055, 0.3, 0, -0.68, 0.04, 0.14);
+  g.add(legR);
+
+  // 軀幹（前傾、脊椎拉長高聳）
+  const torso = new THREE.Group();
+  torso.position.y = 1.05;
+  torso.rotation.x = 0.18;
+  blob(torso, coat, 0.13, 1.5, 1.2, 1.05, 0, 0.1, 0);
+  blob(torso, flesh, 0.13, 1.4, 1.5, 1.0, 0, 0.55, 0);
+  box(torso, coat, 0.16, 0.5, 0.02, -0.15, 0.3, 0.12, 0.1, 0, 0.3); // 白袍殘片
+  box(torso, coatDirty, 0.14, 0.42, 0.02, 0.16, 0.26, 0.12, -0.1, 0, -0.25);
+  // ★ 胸口三顆藍囊（要害）
+  blob(torso, sac, 0.075, 1, 1.1, 0.9, 0, 0.58, -0.14);
+  blob(torso, sac, 0.06, 1, 1.0, 0.9, -0.12, 0.42, -0.13);
+  blob(torso, sac, 0.06, 1, 1.0, 0.9, 0.12, 0.42, -0.13);
+  blob(torso, vein, 0.016, 1, 2.6, 0.5, -0.05, 0.5, -0.16);
+  blob(torso, vein, 0.016, 1, 2.2, 0.5, 0.07, 0.45, -0.16);
+  // 拉長的脊椎（背後聳起一列椎節）
+  for (let i = 0; i < 6; i++) {
+    blob(torso, spine, 0.045 - i * 0.004, 1, 0.8, 1.1, 0, 0.62 + i * 0.12, 0.13 + i * 0.02);
+  }
+
+  // 頭（前伸、深陷的眼、下顎鬆脫）
+  const head = new THREE.Group();
+  head.position.set(0, 0.98, -0.1);
+  head.rotation.x = 0.3;
+  blob(head, flesh, 0.088, 1.0, 1.15, 1.05, 0, 0.05, 0);
+  blob(head, fleshDark, 0.05, 1.2, 0.6, 0.8, 0, -0.07, -0.05, 0.5); // 鬆脫下顎
+  blob(head, mat(0x0c0c10), 0.02, 1.4, 1.3, 0.5, -0.04, 0.07, -0.08);
+  blob(head, mat(0x0c0c10), 0.02, 1.4, 1.3, 0.5, 0.04, 0.07, -0.08);
+  blob(head, sac, 0.012, 1, 1, 1, -0.04, 0.07, -0.095); // 眼底藍光
+  blob(head, sac, 0.012, 1, 1, 1, 0.04, 0.07, -0.095);
+  torso.add(head);
+
+  // ★ 雙臂＝針管觸手（多節、末端長針）
+  const mkTentacle = (side) => {
+    const arm = new THREE.Group();
+    arm.position.set(side * 0.28, 0.62, -0.02);
+    arm.rotation.z = -side * 0.25;
+    cap(arm, flesh, 0.055, 0.22, 0, -0.06, -0.16, Math.PI / 2 + 0.3);
+    cap(arm, fleshDark, 0.045, 0.24, side * 0.06, -0.2, -0.38, Math.PI / 2 + 0.55);
+    cap(arm, fleshDark, 0.035, 0.22, side * 0.1, -0.28, -0.6, Math.PI / 2 + 0.3);
+    blob(arm, vein, 0.012, 1, 2.4, 0.5, side * 0.05, -0.2, -0.4);
+    cap(arm, needle, 0.008, 0.18, side * 0.12, -0.3, -0.78, Math.PI / 2 + 0.2); // 長針
+    return arm;
+  };
+  const armF = mkTentacle(1);
+  const armD = mkTentacle(-1);
+  torso.add(armF, armD);
+
+  g.add(torso);
+  g.userData.parts = { legL, legR, armF, armD, torso };
+  g.userData.kind = 'drbai';
+  g.userData.phase = Math.random() * Math.PI * 2;
+  return g;
+}
+
 // 電氣室守門者（第一章魔王，約 1.9m）：原 E 區值班技術員——
 // 右半身被電弧燒焦碳化、背上插著斷裂電纜（尖端帶電火花）、右臂帶電藍光裂縫。
 export function buildKeeperMesh() {

@@ -24,6 +24,8 @@ import {
   buildIronmaskMesh,
   buildHowlerMesh,
   buildDogkingMesh,
+  buildStitcherMesh,
+  buildDrbaiMesh,
 } from './meshes.js';
 
 const ENEMY_BUILDERS = {
@@ -42,6 +44,8 @@ const ENEMY_BUILDERS = {
   ironmask: buildIronmaskMesh,
   howler: buildHowlerMesh,
   dogking: buildDogkingMesh,
+  stitcher: buildStitcherMesh,
+  drbai: buildDrbaiMesh,
 };
 
 // 外部模型的目標高度與動畫片段偏好（依實際資產的片段名）

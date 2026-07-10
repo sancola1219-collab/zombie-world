@@ -16,6 +16,17 @@ import { ch11 } from './parts/ch11.js';
 import { ch12 } from './parts/ch12.js';
 import { ch13 } from './parts/ch13.js';
 import { ch14 } from './parts/ch14.js';
+import { hospital } from './parts/hospital.js'; // 醫院篇道具等共用內容
+import { ch15 } from './parts/ch15.js';
+import { ch16 } from './parts/ch16.js';
+import { ch17 } from './parts/ch17.js';
+import { ch18 } from './parts/ch18.js';
+import { ch19 } from './parts/ch19.js';
+import { ch20 } from './parts/ch20.js';
+import { ch21 } from './parts/ch21.js';
+import { ch22 } from './parts/ch22.js';
+import { ch23 } from './parts/ch23.js';
+import { ch24 } from './parts/ch24.js';
 
 // NPC 林欣儀在四章都用相同 id 'xinyi'，key 'npc.xinyi.*' 會跨章互相覆蓋——
 // 合併時給每章的 npc.* key 加章節命名空間（npc.{chapterId}.*），main.js 查詢時亦帶 LEVEL.id。
@@ -36,6 +47,17 @@ const scoped = [
   ['chapter12', ch12],
   ['chapter13', ch13],
   ['chapter14', ch14],
+  ['', hospital],
+  ['chapter15', ch15],
+  ['chapter16', ch16],
+  ['chapter17', ch17],
+  ['chapter18', ch18],
+  ['chapter19', ch19],
+  ['chapter20', ch20],
+  ['chapter21', ch21],
+  ['chapter22', ch22],
+  ['chapter23', ch23],
+  ['chapter24', ch24],
 ];
 function merge(lang) {
   const o = {};

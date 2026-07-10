@@ -31,7 +31,7 @@ const STREET = [
   [CHAPTER11, 'chapter11', 'chapter12', 'genlever'],
   [CHAPTER12, 'chapter12', 'chapter13', 'linemap'],
   [CHAPTER13, 'chapter13', 'chapter14', 'tollkey'],
-  [CHAPTER14, 'chapter14', null, null], // 終章用 exitCode 密碼盤
+  [CHAPTER14, 'chapter14', 'chapter15', null], // 密碼盤章；已銜接醫院篇
 ];
 
 // 房間兩兩不得重疊（重疊會造成雙重牆與 roomAt 歧義）
