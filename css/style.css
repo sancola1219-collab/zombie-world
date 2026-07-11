@@ -48,7 +48,11 @@ html, body {
   letter-spacing: 2px;
   color: #e8e2d2;
   text-shadow: 0 1px 4px #000, 0 0 12px rgba(0, 0, 0, 0.8);
-  white-space: nowrap;
+  /* 手機（尤其德文）提示很長：允許換行，不可裁出畫面外 */
+  white-space: normal;
+  max-width: 92vw;
+  width: max-content;
+  text-align: center;
 }
 
 /* 內心獨白：斜體、螢幕中下、暗色調——周亮均的喃喃自語 */
@@ -107,7 +111,8 @@ html, body {
 }
 
 .inv-panel {
-  min-width: 460px;
+  /* 手機寬僅 ~375px：固定 460px 會把格子裁出畫面外 */
+  min-width: min(460px, 94vw);
 }
 
 #inv-grid {
@@ -171,11 +176,18 @@ html, body {
   justify-content: center;
   background: rgba(3, 4, 7, 0.82);
   z-index: 20;
+  /* 小螢幕/橫向手機：面板超過視窗高時整層可捲動，關閉鈕永遠搆得到 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px;
 }
 
 .panel {
   text-align: center;
   padding: 32px 48px;
+  /* 配合 .overlay 捲動：margin auto 讓內容過高時從頂端開始、不足時置中 */
+  margin: auto;
+  max-width: 100%;
 }
 
 .panel h1 {
@@ -399,10 +411,22 @@ html, body {
 }
 
 body.touch #minimap {
-  top: 74px; /* 讓出暫停鈕位置 */
+  top: 74px; /* 讓出右上系統列（暫停/物品/地圖）位置 */
+}
+
+/* 觸控版：心電圖讓開左下搖桿、彈藥數字讓開右下射擊鈕群 */
+body.touch #ecg {
+  bottom: 158px;
+}
+body.touch #ammo {
+  right: 22px;
+  bottom: 226px;
 }
 
 #bigmap-canvas {
+  /* 直向手機比 520px 窄：等比縮放，不讓地圖撐爆面板 */
+  max-width: 86vw;
+  height: auto;
   background: rgba(8, 9, 14, 0.6);
   border: 1px solid rgba(160, 152, 130, 0.5);
   margin-top: 8px;
@@ -538,6 +562,8 @@ body.touch #minimap {
 #tcluster .tbtn[data-code="KeyE"] { right: 104px; bottom: 16px; }
 #tcluster .tbtn[data-code="KeyR"] { right: 118px; bottom: 88px; }
 #tcluster .tbtn[data-code="KeyQ"] { right: 44px; bottom: 108px; }
+/* 跳躍鈕：v3.6 新增時漏了定位會疊在裝填鈕上——放在裝填正上方 */
+#tcluster .tbtn[data-code="Space"] { right: 114px; bottom: 158px; }
 
 #tbtn-pause {
   position: absolute;
@@ -548,20 +574,27 @@ body.touch #minimap {
   font-size: 18px;
 }
 
+/* 物品/地圖：與暫停鈕併成右上系統列——固定顯眼位置，不再藏在射擊鈕群裡 */
 #tbtn-inv {
   position: absolute;
-  right: 24px;
-  bottom: 232px;
-  width: 56px;
-  height: 56px;
+  top: 16px;
+  right: 70px;
+  width: 46px;
+  height: 46px;
 }
 
 #tbtn-map {
   position: absolute;
-  right: 92px;
-  bottom: 232px;
-  width: 56px;
-  height: 56px;
+  top: 16px;
+  right: 124px;
+  width: 46px;
+  height: 46px;
+}
+
+/* 系統列三鈕比戰鬥鈕更實心、邊框更亮——「找不到道具欄」的解法 */
+#tbtn-pause, #tbtn-inv, #tbtn-map {
+  background: rgba(24, 26, 34, 0.72);
+  border: 1.5px solid rgba(200, 185, 150, 0.55);
 }
 
 /* 觸控專用/桌面專用元素切換 */
@@ -582,5 +615,7 @@ body.touch .no-touch { display: none; }
   color: #d8d4c8;
   background: #232630;
   border: 1px solid #4a4438;
+  touch-action: manipulation;
+  cursor: pointer;
   padding: 10px 18px;
 }

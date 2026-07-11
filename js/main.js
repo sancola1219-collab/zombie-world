@@ -59,7 +59,7 @@ import { CHAPTER22 } from './levels/chapter22.js';
 import { CHAPTER23 } from './levels/chapter23.js';
 import { CHAPTER24 } from './levels/chapter24.js';
 import { STORY1 } from './levels/story1.js';
-import { t, tx, setLang, getLang } from './engine/i18n.js';
+import { t, tx, tTouch, setLang, getLang } from './engine/i18n.js';
 
 const CHAPTERS = {
   chapter1: CHAPTER1, chapter2: CHAPTER2, chapter3: CHAPTER3, chapter4: CHAPTER4,
@@ -177,13 +177,17 @@ function boot() {
     });
     document.addEventListener('touchstart', () => audio.unlock(), { once: true });
   }
-  // 覆蓋層的觸控按鈕：合成按鍵事件，走與鍵盤完全相同的路徑
+  // 覆蓋層的觸控按鈕：合成按鍵事件，走與鍵盤完全相同的路徑。
+  // stopPropagation：劇情頁「跳過」等鈕位於「點擊任意處＝翻頁」的層內，不攔會一鈕雙動作
   for (const btn of document.querySelectorAll('.synth-btn, .kp-btn')) {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       input.onKeyDown(btn.dataset.code);
       input.onKeyUp(btn.dataset.code);
     });
   }
+  // 互動提示的觸控措辭：手機沒有 E/R 鍵，改指向畫面上的按鈕
+  const th = (key, vars) => (isTouchOnly ? tTouch(key, vars) : t(key, vars));
 
   // === 後處理：顆粒層（JS 生成噪點圖）與選單背景（有 menu-bg.jpg 就用） ===
   {
@@ -677,7 +681,7 @@ function boot() {
     if (!shot) return;
     if (shot.empty) {
       audio.play('dry');
-      hintFlash(t('no_ammo'));
+      hintFlash(th('no_ammo'));
       return;
     }
     const origin = { x: player.x, y: player.eyeHeight, z: player.z };
@@ -1196,18 +1200,18 @@ function boot() {
       hint(hintOverride.text);
       if (hintOverride.t <= 0) hintOverride = null;
     } else if (npc) {
-      hint(t('hint_talk', { name: npcName(npc) }));
+      hint(th('hint_talk', { name: npcName(npc) }));
     } else if (doc) {
-      hint(t('hint_read', { title: docTitle(doc) }));
+      hint(th('hint_read', { title: docTitle(doc) }));
     } else if (pickup) {
-      hint(t('hint_pickup', { item: itemName(pickup.def.item) }));
+      hint(th('hint_pickup', { item: itemName(pickup.def.item) }));
     } else if (typewriter) {
-      hint(t('hint_typewriter'));
+      hint(th('hint_typewriter'));
     } else if (door) {
-      if (door.lock === 'chapterExit') hint(LEVEL.exitCode ? t('hint_exit_code') : t('hint_exit'));
-      else if (door.lock && inventory.keyItems.includes(door.lock)) hint(t('hint_use_key', { key: lockName(door.lock) }));
+      if (door.lock === 'chapterExit') hint(LEVEL.exitCode ? th('hint_exit_code') : th('hint_exit'));
+      else if (door.lock && inventory.keyItems.includes(door.lock)) hint(th('hint_use_key', { key: lockName(door.lock) }));
       else if (door.lock) hint(t('hint_locked', { key: lockName(door.lock) }));
-      else hint(door.open ? t('hint_close_door') : t('hint_open_door'));
+      else hint(door.open ? th('hint_close_door') : th('hint_open_door'));
     } else {
       hint(idleHint());
     }

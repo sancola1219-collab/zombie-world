@@ -50,6 +50,19 @@ export const UI = {
   hint_close_door: { zh: '按 E 關門', en: 'Press E to close the door', de: 'E — Tür schließen', ja: 'E で扉を閉める' },
   hint_open_door: { zh: '按 E 開門', en: 'Press E to open the door', de: 'E — Tür öffnen', ja: 'E で扉を開ける' },
 
+  // === 互動提示（觸控變體：手機沒有 E 鍵，指向右下「互動」鈕；標籤與 touch_interact 一致）===
+  hint_talk_touch: { zh: '點「互動」與{name}交談', en: 'Tap “Use” to talk to {name}', de: '„Aktion“ — mit {name} sprechen', ja: '「調べる」で{name}と話す' },
+  hint_read_touch: { zh: '點「互動」閱讀「{title}」', en: 'Tap “Use” to read “{title}”', de: '„Aktion“ — „{title}“ lesen', ja: '「調べる」で「{title}」を読む' },
+  hint_pickup_touch: { zh: '點「互動」拾取 {item}', en: 'Tap “Use” to pick up {item}', de: '„Aktion“ — {item} aufheben', ja: '「調べる」で{item}を拾う' },
+  hint_typewriter_touch: { zh: '點「互動」使用打字機', en: 'Tap “Use” for the typewriter', de: '„Aktion“ — Schreibmaschine benutzen', ja: '「調べる」でタイプライターを使う' },
+  hint_exit_touch: { zh: '點「互動」離開廠區', en: 'Tap “Use” to leave the plant', de: '„Aktion“ — Werk verlassen', ja: '「調べる」で工場から出る' },
+  hint_exit_code_touch: { zh: '點「互動」輸入密碼', en: 'Tap “Use” to enter the code', de: '„Aktion“ — Code eingeben', ja: '「調べる」で暗証番号を入力' },
+  hint_use_key_touch: { zh: '點「互動」使用「{key}」', en: 'Tap “Use” to use “{key}”', de: '„Aktion“ — „{key}“ benutzen', ja: '「調べる」で「{key}」を使う' },
+  hint_close_door_touch: { zh: '點「互動」關門', en: 'Tap “Use” to close the door', de: '„Aktion“ — Tür schließen', ja: '「調べる」で扉を閉める' },
+  hint_open_door_touch: { zh: '點「互動」開門', en: 'Tap “Use” to open the door', de: '„Aktion“ — Tür öffnen', ja: '「調べる」で扉を開ける' },
+  no_ammo_touch: { zh: '沒有子彈了——點「裝填」', en: 'Out of ammo — tap “Reload”', de: 'Keine Munition — „Laden“ tippen', ja: '弾切れ——「リロード」をタップ' },
+  story_skip: { zh: '跳過劇情', en: 'Skip', de: 'Überspringen', ja: 'スキップ' },
+
   // === 動態飄字 hintFlash ===
   objective_default: { zh: '活下去', en: 'Survive', de: 'Überlebe', ja: '生き延びろ' },
   got_item: { zh: '取得 {item}', en: 'Got {item}', de: '{item} erhalten', ja: '{item} を入手' },

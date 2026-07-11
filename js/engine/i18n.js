@@ -35,6 +35,11 @@ export function t(key, vars) {
   return s;
 }
 
+// 觸控裝置版 UI 字串：有 key+'_touch' 變體就用它（「按 E」→「點『互動』」），沒有就用原 key
+export function tTouch(key, vars) {
+  return UI[key + '_touch'] ? t(key + '_touch', vars) : t(key, vars);
+}
+
 // 內容字串：zh 直接用資料檔原文；其他語言查 CONTENT，缺則退回中文
 export function tx(key, zhFallback) {
   if (cur === 'zh') return zhFallback ?? '';
