@@ -597,6 +597,49 @@ body.touch #ammo {
   border: 1.5px solid rgba(200, 185, 150, 0.55);
 }
 
+/* === 手機橫向（矮視窗）：直向的縱高排法會讓戰鬥鈕頂到右上系統鈕——
+   改成「扁平橫排」＋整體縮小，兩群互不重疊 === */
+@media (max-height: 520px) {
+  #stick {
+    left: 16px;
+    bottom: 14px;
+    width: 92px;
+    height: 92px;
+  }
+  #stick-knob {
+    width: 38px;
+    height: 38px;
+    margin: -19px 0 0 -19px;
+  }
+  /* 戰鬥鈕群：改寬扁配置（230×130），貼右下 */
+  #tcluster {
+    right: 12px;
+    bottom: 10px;
+    width: 230px;
+    height: 130px;
+  }
+  #tcluster .tbtn {
+    width: 50px;
+    height: 50px;
+    font-size: 13px;
+  }
+  #tcluster .tfire {
+    width: 68px;
+    height: 68px;
+    right: 4px;
+    bottom: 4px;
+    font-size: 14px;
+  }
+  #tcluster .tbtn[data-code="KeyE"] { right: 80px; bottom: 4px; }
+  #tcluster .tbtn[data-code="Space"] { right: 136px; bottom: 14px; }
+  #tcluster .tbtn[data-code="KeyR"] { right: 78px; bottom: 62px; }
+  #tcluster .tbtn[data-code="KeyQ"] { right: 14px; bottom: 78px; }
+  /* 系統列三鈕：縮小、貼緊右上（與戰鬥鈕群垂直錯開） */
+  #tbtn-pause { top: 10px; right: 10px; width: 40px; height: 40px; font-size: 15px; }
+  #tbtn-inv { top: 10px; right: 58px; width: 40px; height: 40px; font-size: 12px; }
+  #tbtn-map { top: 10px; right: 106px; width: 40px; height: 40px; font-size: 12px; }
+}
+
 /* 觸控專用/桌面專用元素切換 */
 .touch-only { display: none; }
 body.touch .touch-only { display: flex; }
