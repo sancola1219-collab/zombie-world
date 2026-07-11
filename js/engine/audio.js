@@ -100,6 +100,56 @@ export class AudioEngine {
         this._burst({ freq: 120, vol: 0.12, dur: 0.9 });
       }
     }, 4200);
+
+    // 層 4：懸疑動機——低音域小調三音短句（小三度→增四度/小二度），稀疏出現。
+    // 「有事要發生」的暗示，不成旋律、不搶戲
+    this._motifTimer = setInterval(() => {
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      if (Math.random() > 0.55) return;
+      const semi = 1.059463;
+      const root = [98, 110, 87.3][Math.floor(Math.random() * 3)]; // G2 / A2 / F2
+      const steps = [0, 3, Math.random() < 0.5 ? 6 : 1]; // 增四度（惡魔音程）或小二度收尾
+      let when = 0;
+      for (let i = 0; i < steps.length; i++) {
+        const f0 = root * Math.pow(semi, steps[i]);
+        const len = i === steps.length - 1 ? 1.6 : 0.9;
+        this._tone({ type: 'triangle', from: f0, vol: 0.05, dur: len, when });
+        this._tone({ type: 'sine', from: f0 * 2, vol: 0.022, dur: len, when }); // 高八度薄影
+        when += len * 0.66;
+      }
+    }, 9500);
+
+    // 層 5：懸疑漸強（riser）——微失諧雙鋸齒緩慢爬升增四度、越來越亮，
+    // 然後戛然而止＋一記悶響（像有什麼在附近關上了門）
+    this._riserTimer = setInterval(() => {
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      if (Math.random() < 0.5) this._riser();
+    }, 27000);
+  }
+
+  _riser() {
+    const t = this.ctx.currentTime;
+    const dur = 4.5;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.07, t + dur);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.07); // 戛然而止
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(300, t);
+    f.frequency.exponentialRampToValueAtTime(1400, t + dur);
+    for (const [f0, f1] of [[110, 155.6], [111.5, 157.2]]) {
+      const o = this.ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      o.connect(f);
+      o.start(t);
+      o.stop(t + dur + 0.15);
+    }
+    f.connect(g);
+    g.connect(this.master);
+    this._burst({ freq: 110, vol: 0.18, dur: 0.5, when: dur + 0.12 });
   }
 
   play(name) {
@@ -186,13 +236,84 @@ export class AudioEngine {
     osc.stop(t + dur + 0.05);
   }
 
+  // 腳步聲：依地板材質合成（tile 磁磚脆響 / metal 鋼板鏗鏘 / wood 木板空響 / carpet 地毯悶步），
+  // 音高每步微隨機避免機械感；奔跑更重、多一聲鞋底摩擦
+  step(floor = 'tile', running = false) {
+    if (!this.ctx) return;
+    const v = running ? 1.35 : 1;
+    const p = 0.9 + Math.random() * 0.2;
+    if (floor === 'carpet') {
+      this._burst({ freq: 230 * p, vol: 0.24 * v, dur: 0.09 });
+    } else if (floor === 'metal') {
+      this._burst({ freq: 300 * p, vol: 0.36 * v, dur: 0.1 });
+      this._burst({ type: 'bandpass', freq: 1500 * p, vol: 0.11 * v, dur: 0.13 });
+      this._tone({ type: 'sine', from: 1750 * p, to: 1350, vol: 0.022 * v, dur: 0.13 }); // 金屬餘韻
+    } else if (floor === 'wood') {
+      this._burst({ freq: 420 * p, vol: 0.32 * v, dur: 0.1 });
+      this._tone({ type: 'sine', from: 185 * p, to: 115, vol: 0.11 * v, dur: 0.1 }); // 木板空腔
+    } else {
+      // tile／硬地：鞋跟脆響＋落地悶聲
+      this._burst({ type: 'bandpass', freq: 1150 * p, vol: 0.17 * v, dur: 0.05 });
+      this._burst({ freq: 340 * p, vol: 0.32 * v, dur: 0.09 });
+    }
+    if (running) this._burst({ type: 'highpass', freq: 2600, vol: 0.05, dur: 0.05, when: 0.035 }); // 鞋底摩擦
+  }
+
   _step() {
-    this._burst({ freq: 320, vol: 0.32, dur: 0.11 });
+    this.step('tile', false); // 舊呼叫相容
   }
 
   _door() {
-    this._tone({ type: 'sawtooth', from: 180, to: 70, vol: 0.06, dur: 0.5 });
-    this._burst({ freq: 140, vol: 0.5, dur: 0.28 });
+    // 三段：門把喀噠 → 鉸鏈吱呀（顫音滑降）→ 門碰框悶響
+    this._tone({ type: 'square', from: 950, vol: 0.06, dur: 0.04 });
+    const t = this.ctx.currentTime + 0.09;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(310, t);
+    osc.frequency.exponentialRampToValueAtTime(150, t + 0.55);
+    const vib = this.ctx.createOscillator(); // 鉸鏈澀滯的顫抖
+    vib.frequency.value = 9;
+    const vibG = this.ctx.createGain();
+    vibG.gain.value = 24;
+    vib.connect(vibG);
+    vibG.connect(osc.frequency);
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 900;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.1, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    osc.connect(f);
+    f.connect(g);
+    g.connect(this.master);
+    osc.start(t);
+    vib.start(t);
+    osc.stop(t + 0.7);
+    vib.stop(t + 0.7);
+    this._burst({ freq: 150, vol: 0.42, dur: 0.2, when: 0.62 }); // 碰框
+  }
+
+  // === 人聲 foley（玩家動作的呼吸與身體聲）===
+
+  // 起跳：短促呼氣「哈」＋衣物一抖
+  _jump() {
+    this._burst({ type: 'bandpass', freq: 760, vol: 0.15, dur: 0.13 });
+    this._tone({ type: 'sawtooth', from: 150, to: 95, vol: 0.03, dur: 0.11 });
+    this._burst({ type: 'highpass', freq: 2400, vol: 0.04, dur: 0.06 });
+  }
+
+  // 落地：鞋底重擊＋低頻震感＋衣物窸窣
+  _land() {
+    this._burst({ freq: 260, vol: 0.42, dur: 0.12 });
+    this._tone({ type: 'sine', from: 120, to: 58, vol: 0.15, dur: 0.13 });
+    this._burst({ type: 'highpass', freq: 2200, vol: 0.05, dur: 0.08, when: 0.02 });
+  }
+
+  // 喘息：吸—呼兩段氣音（奔跑持續或重傷時）
+  _breath() {
+    this._burst({ type: 'bandpass', freq: 900, vol: 0.055, dur: 0.22 });
+    this._burst({ type: 'bandpass', freq: 620, vol: 0.09, dur: 0.34, when: 0.42 });
   }
 
   _locked() {
@@ -357,8 +478,11 @@ export class AudioEngine {
   }
 
   _hurt() {
+    // 受擊：撞擊聲＋喉音悶哼「唔！」＋短促氣音
     this._tone({ type: 'sine', from: 220, to: 90, vol: 0.2, dur: 0.18 });
+    this._tone({ type: 'sawtooth', from: 190, to: 70, vol: 0.07, dur: 0.2 });
     this._burst({ freq: 300, vol: 0.3, dur: 0.1 });
+    this._burst({ type: 'bandpass', freq: 800, vol: 0.08, dur: 0.14, when: 0.04 });
   }
 
   _pickup() {

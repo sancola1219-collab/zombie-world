@@ -242,6 +242,7 @@ function boot() {
   const visited = new Set(); // 已探索房間（小地圖）
   let mapDrawTick = 0;
   let growlCooldown = 0;
+  let breathT = 0; // 喘息累積（奔跑/重傷）
   let musicOn = false;
   const rngFire = mulberry32(1234);
   const rngAI = mulberry32(5678);
@@ -1038,12 +1039,29 @@ function boot() {
     player.look(actions.look[0], actions.look[1]);
     const beforeX = player.x;
     const beforeZ = player.z;
+    const wasAirborne = player.y > 0.001;
     player.update(dt, actions, world);
 
-    stepDistance += Math.hypot(player.x - beforeX, player.z - beforeZ);
+    // 起跳呼氣／落地重踏（人聲 foley）
+    if (!wasAirborne && player.y > 0.001) audio.play('jump');
+    else if (wasAirborne && player.y <= 0.001) audio.play('land');
+
+    const movedDist = Math.hypot(player.x - beforeX, player.z - beforeZ);
+    stepDistance += movedDist;
     if (player.grounded() && stepDistance > (actions.run ? 1.05 : 0.8)) {
       stepDistance = 0;
-      audio.play('step');
+      // 腳步聲依所在房間的地板材質（tile/metal/wood/carpet），奔跑更重
+      const stepRoom = world.rooms.get(world.roomAt(player.x, player.z));
+      audio.step(stepRoom ? stepRoom.floor : 'tile', actions.run);
+    }
+
+    // 喘息：持續奔跑會喘，重傷（danger）時就算站著也沉重呼吸
+    if (actions.run && movedDist > 0.001) breathT += dt * 1.6;
+    else if (player.healthTier() === 'danger') breathT += dt;
+    else breathT = Math.max(0, breathT - dt * 2);
+    if (breathT > 2.4) {
+      breathT = 0;
+      audio.play('breath');
     }
 
     // 地面危險區（火焰/黏液/帶電積水）——跳躍騰空中免疫，跳過火焰是活路
